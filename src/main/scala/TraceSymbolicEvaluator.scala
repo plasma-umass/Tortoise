@@ -7,6 +7,7 @@ import parser._
 import Commands._
 import Terms._
 import theories.Core.{And => _, Or => _, _}
+import theories.Ints.Add
 import rehearsal.{FSPlusSyntax => FSP}
 import rehearsal.{FSPlusTrace => T}
 
@@ -61,18 +62,24 @@ class TraceSymbolicEvaluator(
   def mkHole(loc: Int): Term = holes.get(loc) match {
     case Some(term) => term
     case None => {
-      // FIXME this is probably missing something?
       val hole = freshName(s"hole-$loc")
+      eval(DeclareConst(hole, hashSort))
       holes + (loc -> hole)
       hole.id
     }
   }
 
-  def assertLocIs(loc: Int, st: FSP.FileState): Unit = st match {
-    case FSP.IsFile => eval(Assert(FunctionApplication("is-IsFile".id, Seq(mkHole(loc)))))
-    case FSP.IsDir => eval(Assert(Equals(mkHole(loc), "IsDir".id)))
-    case FSP.DoesNotExist => eval(Assert(Equals(mkHole(loc), "DoesNotExist".id)))
+  def assertLocIs(st: ST, loc: Int, path: Path): Unit =
+    eval(Assert(Equals(mkHole(loc), st.paths(path))))
+
+  def pathIs(st: ST, path: Path, state: FSP.FileState): Term = state match {
+    case FSP.IsFile => FunctionApplication("is-IsFile".id, Seq(st.paths(path)))
+    case FSP.IsDir => Equals(st.paths(path), "IsDir".id)
+    case FSP.DoesNotExist => Equals(st.paths(path), "DoesNotExist".id)
   }
+
+  def assertPathIs(st: ST, path: Path, state: FSP.FileState): Unit =
+    eval(Assert(pathIs(st, path, state)))
 
   def freshST(): ST = {
     val ids = writablePaths.map(p => {
@@ -202,19 +209,35 @@ class TraceSymbolicEvaluator(
   def synthUpdate(cs: Seq[Constraint], trace: T.Statement, softCs: Seq[Constraint]): Option[Substitution] = smt.pushPop {
     val st = freshST()
     val term = evalStmt(st, trace)
+    // Assert hard constraints...
     for ((c, fs) <- cs) {
       c match {
-        case FSP.CPath(_, loc) => assertLocIs(loc, fs)
+        case FSP.CPath(p, loc) => assertPathIs(st, p.path, fs)
         case FSP.CString(_, _) => () // TODO string constants
       }
     }
-    // TODO maximize number of unchanged paths
-    for ((c, fs) <- softCs) {
+    // Maximize number of unchanged paths...
+    val counts = for ((c, fs) <- softCs) yield {
       c match {
-        case FSP.CPath(p, _) => () // TODO paths
-        case FSP.CString(_, _) => () // TODO string constants
+        case FSP.CPath(p, _) => {
+          val path = p.path
+          val term = pathIs(st, path, fs)
+          val held = freshName(s"held-$path")
+          eval(Assert(Equals(held.id, term)))
+          val count = freshName(s"count-$path")
+          eval(Assert(Implies(held.id, Equals(count.id, SNumeral(1)))))
+          eval(Assert(Implies(Not(held.id), Equals(count.id, SNumeral(0)))))
+          count.id
+        }
+        case FSP.CString(_, _) => ??? // TODO string constants
       }
     }
+    val sumTerm = counts.foldRight[Term](SNumeral(0)) {
+      case (count, acc) => Add(count, acc)
+    }
+    val sum = freshName(s"sum")
+    eval(Assert(Equals(sum.id, sumTerm)))
+    // TODO how do we actually use maximize in smtlib?
     if (smt.checkSat()) {
       eval(GetModel())
       ??? // TODO make substitution
