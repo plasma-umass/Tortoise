@@ -152,7 +152,6 @@ class TraceSymbolicEvaluator(
       val preTerm = vars.foldRight[Term]("DoesNotExist".id) {
         case ((p, t), acc) => ite(t, p, acc)
       }
-      println(preTerm)
       val pre = Equals(preTerm, "DoesNotExist".id) && Equals(parentOf(preTerm), "IsDir".id)
       ST(st.isErr || pre, paths)
     }
