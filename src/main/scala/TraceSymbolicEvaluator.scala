@@ -15,14 +15,15 @@ object TraceSymbolicEvaluator {
   type Constraint = (FSP.Const, FSP.FileState)
   type Substitution = Map[Int, FSP.Const]
 
-  def synthUpdate(cs: Seq[Constraint], trace: T.Statement, softCs: Seq[Constraint]): Option[Substitution] = {
-    val impl = new TraceSymbolicEvaluator(List(), Set(), Set(), None) // TODO calculate paths
+  def synthUpdate(stmt: FSP.Statement, cs: Seq[Constraint], softCs: Seq[Constraint]): Option[Substitution] = {
+    val impl = new TraceSymbolicEvaluator(PlusHelpers.stmtPaths(stmt).toList, Set(), Set())
+    val trace = FSPlusEval.tracingEval(stmt)
     impl.synthUpdate(cs, trace, softCs)
   }
 }
 
 class TraceSymbolicEvaluator(
-  allPaths: List[Path], hashes: Set[String], readOnlyPaths: Set[Path], logFile: Option[String]
+  allPaths: List[Path], hashes: Set[String], readOnlyPaths: Set[Path]
 ) extends com.typesafe.scalalogging.LazyLogging {
 
   case class ST(isErr: Term, paths: Map[Path, Term])
