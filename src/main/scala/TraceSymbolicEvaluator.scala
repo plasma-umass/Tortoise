@@ -7,7 +7,7 @@ import parser._
 import Commands._
 import Terms._
 import theories.Core.{And => _, Or => _, _}
-import theories.Ints.Add
+import theories.Ints.{IntSort, Add}
 import rehearsal.{FSPlusSyntax => FSP}
 import rehearsal.{FSPlusTrace => T}
 
@@ -149,9 +149,10 @@ class TraceSymbolicEvaluator(
           p -> ite(cond, "IsDir".id, t)
         }
       }
-      val preTerm = vars.foldRight(False()) {
+      val preTerm = vars.foldRight[Term]("DoesNotExist".id) {
         case ((p, t), acc) => ite(t, p, acc)
       }
+      println(preTerm)
       val pre = Equals(preTerm, "DoesNotExist".id) && Equals(parentOf(preTerm), "IsDir".id)
       ST(st.isErr || pre, paths)
     }
@@ -216,7 +217,7 @@ class TraceSymbolicEvaluator(
     // Assert hard constraints...
     for ((c, fs) <- cs) {
       c match {
-        case FSP.CPath(p, loc) => assertPathIs(st, p.path, fs)
+        case FSP.CPath(p, _) => assertPathIs(st, p.path, fs)
         case FSP.CString(_, _) => () // TODO string constants
       }
     }
@@ -240,6 +241,7 @@ class TraceSymbolicEvaluator(
       case (count, acc) => Add(count, acc)
     }
     val sum = freshName(s"sum")
+    eval(DeclareConst(sum, IntSort()))
     eval(Assert(Equals(sum.id, sumTerm)))
     // TODO how do we actually use maximize in smtlib?
     if (smt.checkSat()) {
