@@ -32,4 +32,11 @@ private[rehearsal] object PlusHelpers {
     case SRm(path) => exprPaths(path)
     case SCp(src, dst) => exprPaths(src) union exprPaths(dst)
   }
+
+  type Constraint = (Const, FileState)
+
+  def constraintPaths(cs: Seq[Constraint]): Set[Path] = cs.foldRight[Set[Path]](Set()) {
+    case ((CPath(p, _), _), acc) => acc + p.path
+    case (_, acc) => acc
+  }
 }

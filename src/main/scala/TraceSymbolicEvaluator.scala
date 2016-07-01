@@ -16,7 +16,8 @@ object TraceSymbolicEvaluator {
   type Substitution = Map[Int, FSP.Const]
 
   def synthUpdate(stmt: FSP.Statement, cs: Seq[Constraint], softCs: Seq[Constraint]): Option[Substitution] = {
-    val impl = new TraceSymbolicEvaluator(PlusHelpers.stmtPaths(stmt).toList, Set(), Set())
+    val paths = PlusHelpers.stmtPaths(stmt) union PlusHelpers.constraintPaths(cs)
+    val impl = new TraceSymbolicEvaluator(paths.toList, Set(), Set())
     val trace = FSPlusEval.tracingEval(stmt)
     impl.synthUpdate(cs, trace, softCs)
   }
