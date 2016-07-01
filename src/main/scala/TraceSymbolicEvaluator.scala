@@ -143,6 +143,7 @@ class TraceSymbolicEvaluator(
             case (x, acc) => x || acc
           }
           val b = freshName("b")
+          vars = vars + (t -> b.id)
           eval(DeclareConst(b, BoolSort()))
           val cond = Not(condPart) && b.id
           p -> ite(cond, "IsDir".id, t)
@@ -163,6 +164,7 @@ class TraceSymbolicEvaluator(
             case (x, acc) => x || acc
           }
           val b = freshName("b")
+          vars = vars + (t -> b.id)
           eval(DeclareConst(b, BoolSort()))
           val cond = Not(condPart) && b.id
           p -> ite(cond, FunctionApplication("IsFile".id, Seq(evalExpr(st, contents))), t)
@@ -184,6 +186,7 @@ class TraceSymbolicEvaluator(
             case (x, acc) => x || acc
           }
           val b = freshName("b")
+          vars = vars + (t -> b.id)
           eval(DeclareConst(b, BoolSort()))
           val cond = Not(condPart) && b.id
           p -> ite(cond, "DoesNotExist".id, t)
