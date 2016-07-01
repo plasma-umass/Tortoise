@@ -64,7 +64,7 @@ class TraceSymbolicEvaluator(
     case Some(term) => term
     case None => {
       val hole = freshName(s"hole-$loc")
-      eval(DeclareConst(hole, hashSort))
+      eval(DeclareConst(hole, statSort))
       holes + (loc -> hole)
       hole.id
     }
