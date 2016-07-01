@@ -48,6 +48,8 @@ class TraceSymbolicEvaluator(
 
   val statSort = Sort(SimpleIdentifier(SSymbol("stat")))
 
+  eval(DeclareFun(SSymbol("parent"), Seq(statSort), statSort))
+
   val readOnlyMap = {
     val ids = readOnlyPaths.map(p => {
       val z = freshName("path")
@@ -91,7 +93,15 @@ class TraceSymbolicEvaluator(
     val isErr = freshName("isErr")
     val commands = DeclareConst(isErr, BoolSort()) +: cmds
     commands.map(eval(_))
-    ST(QualifiedIdentifier(Identifier(isErr)), paths.toMap ++ readOnlyMap)
+    val pathMap = paths.toMap ++ readOnlyMap
+    for ((p, t) <- pathMap) {
+      val cmd = Option(p.getParent()) match {
+        case Some(parent) => Assert(Equals(parentOf(t), pathMap(parent)))
+        case None => Assert(Equals(parentOf(t), "DoesNotExist".id))
+      }
+      eval(cmd)
+    }
+    ST(QualifiedIdentifier(Identifier(isErr)), pathMap)
   }
 
   def evalPred(st: ST, pred: T.Pred): Term = pred match {
