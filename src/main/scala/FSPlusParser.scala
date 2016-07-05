@@ -9,6 +9,7 @@ private class FSPlusParser extends RegexParsers with PackratParsers {
 
   lazy val id: P[String] = "" ~> "[a-z_][a-zA-Z0-9_]*".r
   lazy val quotedText: P[String] = "\"" ~> "[^\"]*".r <~ "\""
+  lazy val angleQuotedText: P[String] = "<" ~> "[^>]*".r <~ ">"
   lazy val num: P[Int] = """-?\d+""".r ^^ { _.toInt }
 
   lazy val predAtom: P[Pred] =
@@ -42,7 +43,7 @@ private class FSPlusParser extends RegexParsers with PackratParsers {
   lazy val location: P[Int] = "[" ~> num <~ "]"
 
   lazy val path: P[Const] =
-    ("path(" ~> quotedText <~ ")") ~ opt(location) ^^ {
+    angleQuotedText ~ opt(location) ^^ {
       case path ~ Some(loc) => CPath(JavaPath(Paths.get(path)), loc)
       case path ~ None => CPath(JavaPath(Paths.get(path)), freshLoc())
     }

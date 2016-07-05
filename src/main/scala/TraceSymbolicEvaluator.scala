@@ -87,7 +87,7 @@ class TraceSymbolicEvaluator(
 
   def freshST(): ST = {
     val ids = writablePaths.map(p => {
-      val z = freshName("path")
+      val z = freshName(s"<$p>")
       ((p, QualifiedIdentifier(Identifier(z))), DeclareConst(z, statSort))
     })
     val (paths, cmds) = ids.unzip
@@ -255,7 +255,7 @@ class TraceSymbolicEvaluator(
     eval(Assert(Equals(sum.id, sumTerm)))
     // TODO how do we actually use maximize in smtlib?
     if (smt.checkSat()) {
-      eval(GetModel())
+      println(smt.getModel())
       ??? // TODO make substitution
     } else {
       None

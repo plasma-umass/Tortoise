@@ -24,7 +24,7 @@ private[rehearsal] object PrettyFSPlus {
   }
 
   def prettyConst(const: Const): String = const match {
-    case CPath(path, loc) => s"""path("${path.path}")[$loc]"""
+    case CPath(path, loc) => s"""<${path.path}>[$loc]"""
     case CString(str, loc) => s""""$str"[$loc]"""
   }
 
