@@ -1,5 +1,7 @@
 package rehearsal
 
+import java.nio.file.Paths
+
 import FSPlusSyntax._
 import Implicits._
 
@@ -39,4 +41,9 @@ private[rehearsal] object PlusHelpers {
     case ((CPath(p, _), _), acc) => acc + p.path
     case (_, acc) => acc
   }
+
+  // This probably needs to be improved.
+  def stringifyPath(path: Path): String = path.toString.replace('/', '$')
+
+  def destringifyPath(str: String): Path = Paths.get(str.replace('$', '/'))
 }
