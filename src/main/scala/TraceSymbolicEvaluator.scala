@@ -222,12 +222,12 @@ class TraceSymbolicEvaluator(
   }
 
   def synthUpdate(cs: Seq[Constraint], trace: T.Statement, softCs: Seq[Constraint]): Option[Substitution] = smt.pushPop {
-    val st = freshST()
-    val term = evalStmt(st, trace)
+    val inST = freshST()
+    val outST = evalStmt(inST, trace)
     // Assert hard constraints...
     for ((c, fs) <- cs) {
       c match {
-        case FSP.CPath(p, _) => assertPathIs(st, p.path, fs)
+        case FSP.CPath(p, _) => assertPathIs(outST, p.path, fs)
         case FSP.CString(_, _) => () // TODO string constants
       }
     }
@@ -236,7 +236,7 @@ class TraceSymbolicEvaluator(
       c match {
         case FSP.CPath(p, _) => {
           val path = p.path
-          val term = pathIs(st, path, fs)
+          val term = pathIs(outST, path, fs)
           val held = freshName(s"held-$path")
           eval(Assert(Equals(held.id, term)))
           val count = freshName(s"count-$path")
