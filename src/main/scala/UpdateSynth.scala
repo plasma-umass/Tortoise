@@ -4,15 +4,14 @@ import edu.umass.cs.smtlib._
 import smtlib.parser.Commands._
 import smtlib.parser.Terms._
 import smtlib.theories.Core._
+import smtlib.theories.Ints._
 import rehearsal.FSPlusSyntax.{FileState, IsFile, IsDir, DoesNotExist}
+import rehearsal.FSPlusSyntax.{Constraint, Substitution}
 import rehearsal.{FSPlusSyntax => FSP}
 import rehearsal.{FSPlusTrace => T}
 
 object UpdateSynth {
   import FSP._
-
-  type Constraint = (Path, FileState)
-  type Substitution = Map[Int, Path]
 
   def applySubst(stmt: Statement)(implicit subst: Substitution): Statement = stmt match {
     case SError | SSkip => stmt
@@ -48,9 +47,10 @@ object UpdateSynth {
 
   def synthesize(stmt: Statement, cs: Seq[Constraint]): Option[Statement] = {
     val paths = PlusHelpers.stmtPaths(stmt) union cs.map(_._1).toSet
+    val soft = PlusHelpers.generateSoftConstraints(stmt, paths)
     val impl = new UpdateSynth(paths)
     val trace = FSPlusEval.tracingEval(stmt)
-    impl.synthesize(trace, cs).map {
+    impl.synthesize(trace, cs, soft).map {
       subst => applySubst(stmt)(subst)
     }
   }
@@ -107,7 +107,6 @@ object UpdateSynth {
 class UpdateSynth(paths: Set[Path]) {
   import SMT._
   import SMT.Implicits._
-  import UpdateSynth.{Constraint, Substitution}
 
   val smt = SMT()
   import smt.eval
@@ -413,7 +412,7 @@ class UpdateSynth(paths: Set[Path]) {
     }.flatten.toMap
   }
 
-  def synthesize(trace: T.Statement, cs: Seq[Constraint]) = {
+  def synthesize(trace: T.Statement, cs: Seq[Constraint], soft: Seq[Constraint]) = {
     // Initialization...
     val lastN = declareStates(trace) - 1
     assertTrace(trace)
@@ -427,10 +426,50 @@ class UpdateSynth(paths: Set[Path]) {
       )))
     }
 
-    if (smt.checkSat()) {
-      Some(parseModel(smt.getModel()))
-    } else {
-      None
+    // Soft constraints...
+    val counts = for ((path, st) <- soft) yield {
+      val pathTerm = PlusHelpers.stringifyPath(path).id
+      val count = freshName("count")
+      eval(DeclareConst(count, IntSort()))
+      eval(Assert(ITE(
+        Equals(
+          FunctionApplication(stateN(lastN), Seq(pathTerm)),
+          convertFileState(st)
+        ),
+        Equals(count.id, SNumeral(1)),
+        Equals(count.id, SNumeral(0))
+      )))
+      count.id
     }
+    val sumTerm = counts.foldRight[Term](SNumeral(0)) {
+      case (count, acc) => Add(count, acc)
+    }
+    val sum = freshName("sum")
+    eval(DeclareConst(sum, IntSort()))
+    eval(Assert(Equals(sum.id, sumTerm)))
+
+    // Optimization...
+    var lo = 0
+    var hi = counts.length
+    var res: Option[List[SExpr]] = None
+
+    while (lo < hi) {
+      smt.pushPop {
+        eval(Assert(
+          GreaterEquals(
+            sum.id,
+            SNumeral((lo + hi) / 2)
+          )
+        ))
+        if (smt.checkSat()) {
+          res = Some(smt.getModel())
+          lo = (lo + hi) / 2 + 1
+        } else {
+          hi = (lo + hi) / 2 - 1
+        }
+      }
+    }
+
+    res.map(model => parseModel(model))
   }
 }

@@ -7,7 +7,14 @@ case class FSPlusEvalError(msg: String) extends RuntimeException(msg)
 case object MalformedFSPlusException extends RuntimeException("Tried to evaluate a malformed FS+ program.")
 
 object FSPlusEval {
-  sealed trait FState
+  sealed trait FState {
+    def toFileState(): FileState = this match {
+      case FDir => IsDir
+      case FFile(_) => IsFile
+      case FEmpty => DoesNotExist
+    }
+  }
+
   case object FDir extends FState
   case class FFile(hash: String) extends FState
   case object FEmpty extends FState
@@ -34,7 +41,7 @@ object FSPlusEval {
 
   def lookup(p: LangPath, st: State): Option[FState] = st.get(p.path)
 
-  def eval(stmt: Statement): Option[State] = eval(stmt, emptyState, emptyEnv)
+  def eval(stmt: Statement): Option[State] = eval(stmt, defaultState, emptyEnv)
 
   def eval(stmt: Statement, state: State): Option[State] = eval(stmt, state, emptyEnv)
 

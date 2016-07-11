@@ -35,11 +35,24 @@ private[rehearsal] object PlusHelpers {
     case SCp(src, dst) => exprPaths(src) union exprPaths(dst)
   }
 
-  type Constraint = (Const, FileState)
+  def generateSoftConstraints(stmt: Statement, paths: Set[Path]): Seq[Constraint] = {
+    FSPlusEval.eval(stmt) match {
+      case Some(state) => {
+        val changed = state.keys.toSet
+        val unchanged = paths -- changed
 
-  def constraintPaths(cs: Seq[Constraint]): Set[Path] = cs.foldRight[Set[Path]](Set()) {
-    case ((CPath(p, _), _), acc) => acc + p.path
-    case (_, acc) => acc
+        val changedCs = state.map {
+          case (path, st) => (path, st.toFileState())
+        }.toSeq
+
+        val unchangedCs = unchanged.map {
+          path => (path, DoesNotExist)
+        }.toSeq
+
+        changedCs ++ unchangedCs
+      }
+      case None => Seq()
+    }
   }
 
   // This probably needs to be improved.
