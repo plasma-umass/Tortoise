@@ -164,14 +164,14 @@ class UpdateSynth(paths: Set[Path]) {
   }
 
   // Hole-tracking utilities
-  val holes: scala.collection.mutable.Map[Int, Term] = scala.collection.mutable.Map()
+  var holes: Map[Int, Term] = Map()
   def mkHole(loc: Int): Term = holes.get(loc) match {
     case Some(term) => term
     case None => {
       val hole = freshName(s"loc-$loc@")
       eval(DeclareConst(hole, pathSort))
       eval(Assert(Not(Equals(hole.id, "NoPath".id))))
-      holes + (loc -> hole)
+      holes = holes + (loc -> hole.id)
       hole.id
     }
   }
@@ -220,9 +220,8 @@ class UpdateSynth(paths: Set[Path]) {
       eval(DeclareConst(pred, BoolSort()))
       eval(Assert(Equals(pred.id, convertPred(p, n))))
       val n1 = assertTrace(s1, cond && pred.id, n)
-      val n2 = assertTrace(s1, cond && pred.id, n)
+      val n2 = assertTrace(s2, cond && Not(pred.id), n)
       Math.max(n1, n2)
-      // FIXME each branch can have a different number of stateful commands.
     }
     case T.SSeq(s1, s2) => {
       val nPrime = assertTrace(s1, cond, n)
@@ -232,7 +231,8 @@ class UpdateSynth(paths: Set[Path]) {
       val pathTerm = convertExpr(path, n)
 
       // Carry over untouched paths between states.
-      eval(Assert(
+      eval(Assert(Implies(
+        cond,
         Forall(SortedVar(SSymbol("p"), pathSort), Seq(),
           Implies(
             Not(Equals("p".id, pathTerm)),
@@ -242,18 +242,21 @@ class UpdateSynth(paths: Set[Path]) {
             )
           )
         )
-      ))
+      )))
 
       // Semantics of mkdir.
-      eval(Assert(ITE(
-        And(
-          Equals(FunctionApplication(stateN(n), Seq(pathTerm)), "Null".id),
-          Equals(FunctionApplication(stateN(n), Seq(
-            FunctionApplication("parent".id, Seq(pathTerm))
-          )), "Dir".id)
-        ),
-        Equals(FunctionApplication(stateN(n + 1), Seq(pathTerm)), "Dir".id),
-        Equals("error".id, True())
+      eval(Assert(Implies(
+        cond,
+        ITE(
+          And(
+            Equals(FunctionApplication(stateN(n), Seq(pathTerm)), "Null".id),
+            Equals(FunctionApplication(stateN(n), Seq(
+              FunctionApplication("parent".id, Seq(pathTerm))
+            )), "Dir".id)
+          ),
+          Equals(FunctionApplication(stateN(n + 1), Seq(pathTerm)), "Dir".id),
+          Equals("error".id, True())
+        )
       )))
 
       n + 1
@@ -262,7 +265,8 @@ class UpdateSynth(paths: Set[Path]) {
       val pathTerm = convertExpr(path, n)
 
       // Carry over untouched paths between states.
-      eval(Assert(
+      eval(Assert(Implies(
+        cond,
         Forall(SortedVar(SSymbol("p"), pathSort), Seq(),
           Implies(
             Not(Equals("p".id, pathTerm)),
@@ -272,18 +276,21 @@ class UpdateSynth(paths: Set[Path]) {
             )
           )
         )
-      ))
+      )))
 
       // Semantics of createfile.
-      eval(Assert(ITE(
-        And(
-          Equals(FunctionApplication(stateN(n), Seq(pathTerm)), "Null".id),
-          Equals(FunctionApplication(stateN(n), Seq(
-            FunctionApplication("parent".id, Seq(pathTerm))
-          )), "Dir".id)
-        ),
-        Equals(FunctionApplication(stateN(n + 1), Seq(pathTerm)), "File".id),
-        Equals("error".id, True())
+      eval(Assert(Implies(
+        cond,
+        ITE(
+          And(
+            Equals(FunctionApplication(stateN(n), Seq(pathTerm)), "Null".id),
+            Equals(FunctionApplication(stateN(n), Seq(
+              FunctionApplication("parent".id, Seq(pathTerm))
+            )), "Dir".id)
+          ),
+          Equals(FunctionApplication(stateN(n + 1), Seq(pathTerm)), "File".id),
+          Equals("error".id, True())
+        )
       )))
 
       n + 1
@@ -292,7 +299,8 @@ class UpdateSynth(paths: Set[Path]) {
       val pathTerm = convertExpr(path, n)
 
       // Carry over untouched paths between states.
-      eval(Assert(
+      eval(Assert(Implies(
+        cond,
         Forall(SortedVar(SSymbol("p"), pathSort), Seq(),
           Implies(
             Not(Equals("p".id, pathTerm)),
@@ -302,24 +310,27 @@ class UpdateSynth(paths: Set[Path]) {
             )
           )
         )
-      ))
+      )))
 
       // Semantics of rm.
-      eval(Assert(ITE(
-        Or(
-          Equals(FunctionApplication(stateN(n), Seq(pathTerm)), "File".id),
-          And(
-            Equals(FunctionApplication(stateN(n), Seq(pathTerm)), "Dir".id),
-            Forall(SortedVar(SSymbol("p"), pathSort), Seq(),
-              Implies(
-                Equals(FunctionApplication("parent".id, Seq("p".id)), pathTerm),
-                Equals(FunctionApplication(stateN(n), Seq("p".id)), "Null".id)
+      eval(Assert(Implies(
+        cond,
+        ITE(
+          Or(
+            Equals(FunctionApplication(stateN(n), Seq(pathTerm)), "File".id),
+            And(
+              Equals(FunctionApplication(stateN(n), Seq(pathTerm)), "Dir".id),
+              Forall(SortedVar(SSymbol("p"), pathSort), Seq(),
+                Implies(
+                  Equals(FunctionApplication("parent".id, Seq("p".id)), pathTerm),
+                  Equals(FunctionApplication(stateN(n), Seq("p".id)), "Null".id)
+                )
               )
             )
-          )
-        ),
-        Equals(FunctionApplication(stateN(n + 1), Seq(pathTerm)), "Null".id),
-        Equals("error".id, True())
+          ),
+          Equals(FunctionApplication(stateN(n + 1), Seq(pathTerm)), "Null".id),
+          Equals("error".id, True())
+        )
       )))
 
       n + 1
@@ -330,7 +341,8 @@ class UpdateSynth(paths: Set[Path]) {
       val dstTerm = convertExpr(dst, n)
 
       // Carry over untouched paths between states.
-      eval(Assert(
+      eval(Assert(Implies(
+        cond,
         Forall(SortedVar(SSymbol("p"), pathSort), Seq(),
           Implies(
             Not(And(
@@ -343,16 +355,19 @@ class UpdateSynth(paths: Set[Path]) {
             )
           )
         )
-      ))
+      )))
 
       // Semantics of cp.
-      eval(Assert(ITE(
-        And(
-          Equals(FunctionApplication(stateN(n), Seq(srcTerm)), "File".id),
-          Equals(FunctionApplication(stateN(n), Seq(dstTerm)), "Null".id)
-        ),
-        Equals(FunctionApplication(stateN(n + 1), Seq(dstTerm)), "File".id),
-        Equals("error".id, True())
+      eval(Assert(Implies(
+        cond,
+        ITE(
+          And(
+            Equals(FunctionApplication(stateN(n), Seq(srcTerm)), "File".id),
+            Equals(FunctionApplication(stateN(n), Seq(dstTerm)), "Null".id)
+          ),
+          Equals(FunctionApplication(stateN(n + 1), Seq(dstTerm)), "File".id),
+          Equals("error".id, True())
+        )
       )))
 
       n + 1
