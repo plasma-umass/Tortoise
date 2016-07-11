@@ -56,54 +56,6 @@ object UpdateSynth {
   }
 }
 
-/*
-
-(* The code below is an idea about how to do this. *)
-
-(declare-datatypes () ((Path NoPath Root Foo Bar)))
-(declare-datatypes () ((State Dir File Null)))
-
-(declare-const error Bool)
-(assert (not error))
-
-(declare-fun parent (Path) Path)
-(assert (= (parent Root) NoPath))
-(assert (= (parent Foo) Root))
-(assert (= (parent Bar) Root))
-
-(declare-fun state1? (Path) State)
-(assert (= (state1? NoPath) Null))
-(assert (= (state1? Root) Dir))
-(assert (= (state1? Foo) Null))
-(assert (= (state1? Bar) Null))
-
-
-(declare-fun state2? (Path) State)
-
-
-(declare-const loc-1 Path)
-(assert (not (= loc-1 NoPath)))
-(assert (forall ((p Path))
-  (=>
-    (not (= p loc-1))
-    (= (state2? p) (state1? p))
-  )
-))
-(assert (ite
-  (and
-    (= (state1? loc-1) Null)
-    (= (state1? (parent loc-1)) Dir)
-  )
-  (= (state2? loc-1) Dir)
-  (= error true)
-))
-
-(assert (= (state2? Foo) Dir))
-
-(check-sat)
-(get-model)
-
-*/
 class UpdateSynth(paths: Set[Path]) {
   import SMT._
   import SMT.Implicits._
