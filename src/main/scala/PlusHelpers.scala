@@ -35,24 +35,61 @@ private[rehearsal] object PlusHelpers {
     case SCp(src, dst) => exprPaths(src) union exprPaths(dst)
   }
 
-  def generateSoftConstraints(stmt: Statement, paths: Set[Path]): Seq[Constraint] = {
+  def generateSoftPathConstraints(stmt: Statement, paths: Set[Path]): Seq[PathConstraint] = {
     FSPlusEval.eval(stmt) match {
       case Some(state) => {
         val changed = state.keys.toSet
         val unchanged = paths -- changed
 
         val changedCs = state.map {
-          case (path, st) => (path, st.toFileState())
+          case (path, st) => PathConstraint(path, st.toFileState())
         }.toSeq
 
         val unchangedCs = unchanged.map {
-          path => (path, DoesNotExist)
+          path => PathConstraint(path, DoesNotExist)
         }.toSeq
 
         changedCs ++ unchangedCs
       }
       case None => Seq()
     }
+  }
+
+   def generateSoftLocationConstraints(stmt: Statement): Seq[LocationConstraint] = {
+
+    def genStmt(stmt: Statement): Set[LocationConstraint] = stmt match {
+      case SError | SSkip => Set()
+      case SLet(_, e, body) => genExpr(e) union genStmt(body)
+      case SIf(pred, s1, s2) => genPred(pred) union genStmt(s1) union genStmt(s2)
+      case SSeq(s1, s2) => genStmt(s1) union genStmt(s2)
+      case SMkdir(path) => genExpr(path)
+      case SCreateFile(path, contents) => genExpr(path) union genExpr(contents)
+      case SRm(path) => genExpr(path)
+      case SCp(src, dst) => genExpr(src) union genExpr(dst)
+    }
+
+    def genExpr(expr: Expr): Set[LocationConstraint] = expr match {
+      case EId(_) => Set()
+      case EPath(path) => genConst(path)
+      case EString(str) => genConst(str)
+      case EParent(e) => genExpr(e)
+      case EIf(pred, e1, e2) => genPred(pred) union genExpr(e1) union genExpr(e2)
+    }
+
+    def genPred(pred: Pred): Set[LocationConstraint] = pred match {
+      case PTrue | PFalse => Set()
+      case PAnd(lhs, rhs) => genPred(lhs) union genPred(rhs)
+      case POr(lhs, rhs) => genPred(lhs) union genPred(rhs)
+      case PNot(pred) => genPred(pred)
+      case PTestFileState(path, _) => genExpr(path)
+    }
+
+    def genConst(const: Const): Set[LocationConstraint] = const match {
+      case CPath(p, loc) => Set(LocationConstraint(loc, p.path))
+      case CString(_, _) => Set()
+    }
+
+    genStmt(stmt).toSeq
   }
 
   // This probably needs to be improved.

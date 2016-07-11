@@ -6,7 +6,7 @@ import smtlib.parser.Terms._
 import smtlib.theories.Core._
 import smtlib.theories.Ints._
 import rehearsal.FSPlusSyntax.{FileState, IsFile, IsDir, DoesNotExist}
-import rehearsal.FSPlusSyntax.{Constraint, Substitution}
+import rehearsal.FSPlusSyntax.{Constraint, PathConstraint, LocationConstraint, Substitution}
 import rehearsal.{FSPlusSyntax => FSP}
 import rehearsal.{FSPlusTrace => T}
 
@@ -45,9 +45,11 @@ object UpdateSynth {
     case CPath(_, _) | CString(_, _) => const
   }
 
-  def synthesize(stmt: Statement, cs: Seq[Constraint]): Option[Statement] = {
-    val paths = PlusHelpers.stmtPaths(stmt) union cs.map(_._1).toSet
-    val soft = PlusHelpers.generateSoftConstraints(stmt, paths)
+  def synthesize(stmt: Statement, cs: Seq[PathConstraint]): Option[Statement] = {
+    val paths = PlusHelpers.stmtPaths(stmt) union cs.map(_.path).toSet
+    val softPaths = PlusHelpers.generateSoftPathConstraints(stmt, paths)
+    val softLocs = PlusHelpers.generateSoftLocationConstraints(stmt)
+    val soft = softPaths union softLocs
     val impl = new UpdateSynth(paths)
     val trace = FSPlusEval.tracingEval(stmt)
     impl.synthesize(trace, cs, soft).map {
@@ -394,13 +396,13 @@ class UpdateSynth(paths: Set[Path]) {
     }.flatten.toMap
   }
 
-  def synthesize(trace: T.Statement, cs: Seq[Constraint], soft: Seq[Constraint]) = {
+  def synthesize(trace: T.Statement, cs: Seq[PathConstraint], soft: Seq[Constraint]) = {
     // Initialization...
     val lastN = declareStates(trace) - 1
     assertTrace(trace)
 
     // Hard constraints...
-    for ((path, st) <- cs) {
+    for (PathConstraint(path, st) <- cs) {
       val pathTerm = PlusHelpers.stringifyPath(path).id
       eval(Assert(Equals(
         FunctionApplication(stateN(lastN), Seq(pathTerm)),
@@ -409,19 +411,35 @@ class UpdateSynth(paths: Set[Path]) {
     }
 
     // Soft constraints...
-    val counts = for ((path, st) <- soft) yield {
-      val pathTerm = PlusHelpers.stringifyPath(path).id
-      val count = freshName("count")
-      eval(DeclareConst(count, IntSort()))
-      eval(Assert(ITE(
-        Equals(
-          FunctionApplication(stateN(lastN), Seq(pathTerm)),
-          convertFileState(st)
-        ),
-        Equals(count.id, SNumeral(1)),
-        Equals(count.id, SNumeral(0))
-      )))
-      count.id
+    val counts = soft.map {
+      // Soft path constraints
+      case PathConstraint(path, st) => {
+        val pathTerm = PlusHelpers.stringifyPath(path).id
+        val count = freshName("count")
+        eval(DeclareConst(count, IntSort()))
+        eval(Assert(ITE(
+          Equals(
+            FunctionApplication(stateN(lastN), Seq(pathTerm)),
+            convertFileState(st)
+          ),
+          Equals(count.id, SNumeral(1)),
+          Equals(count.id, SNumeral(0))
+        )))
+        count.id
+      }
+
+      // Soft location constraints
+      case LocationConstraint(loc, path) => {
+        val pathTerm = PlusHelpers.stringifyPath(path).id
+        val count = freshName("count")
+        eval(DeclareConst(count, IntSort()))
+        eval(Assert(ITE(
+          Equals(mkHole(loc), pathTerm),
+          Equals(count.id, SNumeral(1)),
+          Equals(count.id, SNumeral(0))
+        )))
+        count.id
+      }
     }
     val sumTerm = counts.foldRight[Term](SNumeral(0)) {
       case (count, acc) => Add(count, acc)
@@ -438,7 +456,7 @@ class UpdateSynth(paths: Set[Path]) {
     while (lo < hi) {
       smt.pushPop {
         eval(Assert(
-          GreaterEquals(
+          GreaterThan(
             sum.id,
             SNumeral((lo + hi) / 2)
           )
@@ -447,7 +465,7 @@ class UpdateSynth(paths: Set[Path]) {
           res = Some(smt.getModel())
           lo = (lo + hi) / 2 + 1
         } else {
-          hi = (lo + hi) / 2 - 1
+          hi = (lo + hi) / 2
         }
       }
     }

@@ -3,8 +3,12 @@ package rehearsal
 import PrettyFSPlus._
 
 object FSPlusSyntax {
-  type Constraint = (Path, FileState)
   type Substitution = Map[Int, Path]
+
+  sealed trait Constraint
+
+  case class PathConstraint(path: Path, state: FileState) extends Constraint
+  case class LocationConstraint(loc: Int, path: Path) extends Constraint
 
   sealed trait LangPath {
     def path(): Path = this match {

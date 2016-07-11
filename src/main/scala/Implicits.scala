@@ -126,6 +126,13 @@ object Implicits {
       loop(path.getParent(), Set())
     }
 
+    def ->(st: FSPlusSyntax.FileState) = FSPlusSyntax.PathConstraint(path, st)
+
+
+  }
+
+  implicit class RichLoc(loc: Int) {
+    def ->(path: Path) = FSPlusSyntax.LocationConstraint(loc, path)
   }
 
 }
