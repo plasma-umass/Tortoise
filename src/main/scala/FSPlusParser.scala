@@ -69,17 +69,37 @@ private class FSPlusParser extends RegexParsers with PackratParsers {
     "rm(" ~> expr <~ ")" ^^ { SRm(_) } |
     ("cp(" ~> expr <~ ",") ~ (expr <~ ")") ^^ { case src ~ dst => SCp(src, dst) }
 
-
   lazy val stmt: P[Statement] =
     ("if" ~> pred <~ "then") ~ stmt ~ ("else" ~> stmt) ^^ { case p ~ s1 ~ s2 => SIf(p, s1, s2) } |
     ("let" ~> id <~ "=") ~ expr ~ ("in" ~> stmt) ^^ { case id ~ e ~ body => SLet(id, e, body) } |
     stmtAtom ~ (";" ~> stmt) ^^ { case s1 ~ s2 => SSeq(s1, s2) } |
     stmtAtom
+
+  lazy val fileState: P[FileState] =
+    "file" ^^ { _ => IsFile       } |
+    "File" ^^ { _ => IsFile       } |
+    "dir"  ^^ { _ => IsDir        } |
+    "Dir"  ^^ { _ => IsDir        } |
+    "null" ^^ { _ => DoesNotExist } |
+    "Null" ^^ { _ => DoesNotExist }
+
+  lazy val pathConstraint: P[PathConstraint] =
+    angleQuotedText ~ ("->" ~> fileState) ^^ {
+      case path ~ st => PathConstraint(Paths.get(path), st)
+    }
+
+  lazy val pathConstraints: P[Seq[PathConstraint]] =
+    repsep(pathConstraint, ",")
 }
 
 object FSPlusParser {
   private val parser = new FSPlusParser()
   import parser._
+
+  def parseConstraints(str: String): Seq[PathConstraint] = parseAll(pathConstraints, str) match {
+    case Success(r, _) => r
+    case m => throw new ParseError(s"$m")
+  }
 
   def parse(str: String): Statement = parseAll(stmt, str) match {
     case Success(r, _) => r

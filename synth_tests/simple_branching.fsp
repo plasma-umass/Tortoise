@@ -1,0 +1,5 @@
+mkdir(</foo>);
+if dir?(</foo>)
+then mkdir(</vote>);
+     mkfile(</vote/awe>, "yea")
+else mkdir(</vote>)

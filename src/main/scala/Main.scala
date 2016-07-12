@@ -132,6 +132,34 @@ object Main extends App {
     }
   }
 
+  def synthesizer(config: Config): Unit = {
+    val fileName = config.string("filename")
+    val constraints = FSPlusParser.parseConstraints(config.string("constraints"))
+
+    Try(UpdateSynth.synthesize(FSPlusParser.parseFile(fileName), constraints)) match {
+      case Success(Some(stmt)) => {
+        println("Successfully synthesized an updated program:")
+        println(stmt)
+      }
+      case Success(None) => {
+        println("An update could not be synthesized given those constraints.")
+      }
+      case Failure(ParseError(msg)) => {
+        println("Failed to parse original program:")
+        println(msg)
+      }
+      case Failure(MalformedFSPlusException) => {
+        println("Failed to evaluate program:")
+        println("Tried to evaluate a malformed FS+ program.")
+      }
+      case Failure(FSPlusEvalError(msg)) => {
+        println("Failed to evaluate program:")
+        println(msg)
+      }
+      case Failure(exn) => throw exn
+    }
+  }
+
   val parser = new scopt.OptionParser[Config]("rehearsal") {
 
     def string(name: String) = {
@@ -155,6 +183,11 @@ object Main extends App {
         .action((_, c) => c.copy(command = checker))
         .text("Check a Puppet manifest for errors.")
         .children(string("filename"), string("os"))
+
+    cmd("synth")
+        .action((_, c) => c.copy(command = synthesizer))
+        .text("Synthesize an update to the specified Puppet manifest.")
+        .children(string("filename"), string("constraints"))
 
     cmd("benchmark-pruning-size")
       .action((_, c) => c.copy(command = pruningSizeBenchmark))
