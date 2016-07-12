@@ -1,0 +1,6 @@
+let path = </foo>
+in mkdir(path);
+   if dir?(path)
+   then mkdir(</vote>);
+        mkfile(</vote/awe>, "yea")
+   else mkdir(</vote>)
