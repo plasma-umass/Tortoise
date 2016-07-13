@@ -66,11 +66,28 @@ object PuppetSyntax extends com.typesafe.scalalogging.LazyLogging {
 
    // Manifests must not appear in Expr, either directly or indirectly
   sealed trait Expr extends Positional {
-     def value[T](implicit extractor: Extractor[Expr, T]) = extractor(this)
+    def value[T](implicit extractor: Extractor[Expr, T]) = extractor(this)
+
+    var currLoc: Option[Int] = None
+
+    def setLoc(loc: Int): Expr = {
+      currLoc = Some(loc)
+      this
+    }
+
+    def setLoc(loc: Option[Int]): Expr = {
+      currLoc = loc
+      this
+    }
+
+    def loc(): Int = currLoc.get
   }
 
   case object EUndef extends Expr
-  case class EStr(s: String) extends Expr
+  case class EStr(s: String) extends Expr {
+    override def setLoc(loc: Int): EStr = super.setLoc(loc).asInstanceOf[EStr]
+    override def setLoc(loc: Option[Int]): EStr = super.setLoc(loc).asInstanceOf[EStr]
+  }
   case class ENum(n: Int) extends Expr
   case class EVar(name: String) extends Expr
   case class EBool(b: Boolean) extends Expr

@@ -5,10 +5,28 @@ import PuppetSyntax._
 import Implicits._
 
 private class PuppetParser extends RegexParsers with PackratParsers {
-
   type P[T] = PackratParser[T]
 
   override protected val whiteSpace = """(\s|#.*|(/\*((\*[^/])|[^*])*\*/))+""".r
+
+  var loc = 0
+  def freshLoc(): Int = {
+    loc += 1
+    loc
+  }
+
+  var holes: Map[(String, String), Int] = Map()
+  def locForRes(typ: String, title: Expr): Option[Int] = title match {
+    case EStr(title) => holes.get(typ -> title) match {
+      case Some(n) => Some(n)
+      case None => {
+        val loc = freshLoc()
+        holes = holes + ((typ, title) -> loc)
+        Some(loc)
+      }
+    }
+    case _ => None
+  }
 
   // TODO(arjun): escape sequences? interpolation?
   lazy val stringVal: P[String] =
@@ -90,9 +108,9 @@ private class PuppetParser extends RegexParsers with PackratParsers {
     word ~ ("{" ~> rep1sep(resourcePair, ";")) <~ (opt(";") ~ "}") ^^
       { case typ ~ lst => ResourceDecl(typ, lst) } |
     capWord ~ ("[" ~> expr <~ "]") ~ ("{" ~> attributes <~ "}") ^^
-      { case typ ~ title ~ attrs => ResourceRef(typ, title, attrs) } |
+      { case typ ~ title ~ attrs => ResourceRef(typ, title.setLoc(locForRes(typ, title)), attrs) } |
     capWord ~ ("[" ~> expr <~ "]") ^^
-      { case typ ~ title => ResourceRef(typ, title, Seq()) } |
+      { case typ ~ title => ResourceRef(typ, title.setLoc(locForRes(typ, title)), Seq()) } |
     capWord ~ ("<|" ~> rexpr <~ "|>") ^^
       { case typ ~ e => RCollector(typ, e) }
 
@@ -101,7 +119,7 @@ private class PuppetParser extends RegexParsers with PackratParsers {
   }
 
   //Attribute
-  lazy val attrId: P[EStr] = id ^^ { case s => EStr(s) }
+  lazy val attrId: P[EStr] = id ^^ { case s => EStr(s).setLoc(freshLoc()) }
   lazy val attribute: P[Attribute] =
     (attrId | vari) ~ ("=>" ~> (expr | attrId)) ^^ { case name ~ value => Attribute(name, value) }
 
@@ -121,7 +139,7 @@ private class PuppetParser extends RegexParsers with PackratParsers {
     "true" ^^ { _ => EBool(true) } |
     "false" ^^ { _ => EBool(false) } |
     vari |
-    stringVal ^^ { x => EStr(x) } |
+    stringVal ^^ { x => EStr(x).setLoc(freshLoc()) } |
     """\d+""".r ^^
       { n => ENum(n.toInt) } |
     "[" ~> repsep(expr, ",") <~ (opt(",") ~ "]") ^^ { case es => EArray(es) } |
@@ -174,9 +192,9 @@ private class PuppetParser extends RegexParsers with PackratParsers {
     "undef" ^^ { _ => EUndef } |
     "true" ^^ { _ => EBool(true) } |
     "false" ^^ { _ => EBool(false) } |
-    stringVal ^^ { x => EStr(x) } |
+    stringVal ^^ { x => EStr(x).setLoc(freshLoc()) } |
     """\d+""".r ^^  { n => ENum(n.toInt) } |
-    word ~ "[" ~ expr ~ "]" ^^ { case typ ~ _ ~ title ~ _ => EResourceRef(typ, title) }
+    word ~ ("[" ~> expr <~ "]") ^^ { case typ ~ title => EResourceRef(typ, title.setLoc(locForRes(typ, title))) }
   }
 
   lazy val rexprAtom: P[RExpr] = positioned {
