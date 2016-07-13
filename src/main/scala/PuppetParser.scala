@@ -25,35 +25,35 @@ private class PuppetParser extends RegexParsers with PackratParsers {
 
   //Manifest
   lazy val manifest: P[Manifest] = positioned {
-    varName ~ "=" ~ expr ^^
-      { case x ~ _ ~ e => MSet(x, e) } |
-    "define" ~ word ~ params ~ body ^^
-      { case _ ~ x ~ xs ~ m => MDefine(x, xs, m) } |
-    "class" ~ word ~ params ~ body ^^
-      { case _ ~ x ~ xs ~ m => MClass(x, xs, None, m) } |
-    "class" ~ word ~ params ~ "inherits" ~ word ~ body ^^
-      { case _ ~ x ~ xs ~ _ ~ y ~ m => MClass(x, xs, Some(y), m) } |
-    "case" ~ expr ~ "{" ~ cases ~ "}" ^^
-      { case _ ~ e ~ _ ~ lst ~ _ => MCase(e, lst) } |
-    "include" ~ repsep(className, ",") ^^
-      { case _ ~ xs => MInclude(xs) } |
-    "require" ~ className ^^
-      { case _ ~ x => MRequire(x) } |
-    "if" ~ expr ~ body ~ elses ^^
-      { case _ ~ e ~ m1 ~ m2 => MIte(e, m1, m2) } |
+    varName ~ ("=" ~> expr) ^^
+      { case x ~ e => MSet(x, e) } |
+    "define" ~> word ~ params ~ body ^^
+      { case x ~ xs ~ m => MDefine(x, xs, m) } |
+    "class" ~> word ~ params ~ body ^^
+      { case x ~ xs ~ m => MClass(x, xs, None, m) } |
+    "class" ~> word ~ params ~ ("inherits" ~> word) ~ body ^^
+      { case x ~ xs ~ y ~ m => MClass(x, xs, Some(y), m) } |
+    "case" ~> expr ~ ("{" ~> cases <~ "}") ^^
+      { case e ~ lst => MCase(e, lst) } |
+    "include" ~> repsep(className, ",") ^^
+      { case xs => MInclude(xs) } |
+    "require" ~> className ^^
+      { case x => MRequire(x) } |
+    "if" ~> expr ~ body ~ elses ^^
+      { case e ~ m1 ~ m2 => MIte(e, m1, m2) } |
     rep1sep(resource, "->") ^^
       { case lst => MResources(lst) } |
-    word ~ "(" ~ repsep(expr, ",") ~ ")" ^^
-      { case f ~ _ ~ xs ~ _  => MApp(f, xs) } |
-    capWord ~ "{" ~ attributes ~ "}" ^^
-        { case typ ~ _ ~ attrs ~ _ => MResourceDefault(typ, attrs) }
+    word ~ ("(" ~> repsep(expr, ",") <~ ")") ^^
+      { case f ~ xs => MApp(f, xs) } |
+    capWord ~ ("{" ~> attributes <~ "}") ^^
+      { case typ ~ attrs => MResourceDefault(typ, attrs) }
   }
 
   lazy val elses: P[Manifest] = positioned {
-    "else" ~ body ^^
-      { case _ ~ m => m } |
-    "elsif" ~ parenExpr ~ body ~ elses ^^
-      { case _ ~ e ~ m1 ~ m2 => MIte(e, m1, m2) } |
+    "else" ~> body ^^
+      { case m => m } |
+    "elsif" ~> parenExpr ~ body ~ elses ^^
+      { case e ~ m1 ~ m2 => MIte(e, m1, m2) } |
     success(()) ^^
       { case () => MEmpty }
     }
@@ -67,8 +67,8 @@ private class PuppetParser extends RegexParsers with PackratParsers {
   }
 
   lazy val cases: P[Seq[Case]] =
-    "default" ~ ":" ~ body ^^ { case _ ~ _ ~ m => Seq(CaseDefault(m)) } |
-    expr ~ ":" ~ body ~ cases ^^ { case e ~ _ ~ m ~ rest => CaseExpr(e, m) +: rest } |
+    ("default" ~ ":") ~> body ^^ { case m => Seq(CaseDefault(m)) } |
+    expr ~ (":" ~> body) ~ cases ^^ { case e ~ m ~ rest => CaseExpr(e, m) +: rest } |
     success(()) ^^ { case _ => Seq[Case]() }
 
   lazy val parameter: P[Argument] = opt(dataType) ~ varName ~ opt("=" ~> expr) ^^ {
@@ -81,20 +81,20 @@ private class PuppetParser extends RegexParsers with PackratParsers {
     success(()) ^^ { case _ => Seq[Argument]() }
 
   lazy val edges: P[Seq[Resource]] =
-    resource ~ "->" ~ edges ^^
-      { case x ~ _ ~ xs => x +: xs } |
+    resource ~ ("->" ~> edges) ^^
+      { case x ~ xs => x +: xs } |
     resource ^^
       { case x => Seq(x) }
 
   lazy val resource: P[Resource] =
-    word ~ "{" ~ rep1sep(resourcePair, ";") ~ opt(";") ~ "}" ^^
-      { case typ ~ _ ~ lst ~ _ ~ _ => ResourceDecl(typ, lst) } |
-    capWord ~ "[" ~ expr ~ "]" ~ "{" ~ attributes ~ "}" ^^
-      { case typ ~ _ ~ title ~ _ ~ _ ~ attrs ~ _ => ResourceRef(typ, title, attrs) } |
-    capWord ~ "[" ~ expr ~ "]" ^^
-      { case typ ~ _ ~ title ~ _ => ResourceRef(typ, title, Seq()) } |
-    capWord ~ "<|" ~ rexpr ~ "|>" ^^
-      { case typ ~ _ ~ e ~ _ => RCollector(typ, e) }
+    word ~ ("{" ~> rep1sep(resourcePair, ";")) <~ (opt(";") ~ "}") ^^
+      { case typ ~ lst => ResourceDecl(typ, lst) } |
+    capWord ~ ("[" ~> expr <~ "]") ~ ("{" ~> attributes <~ "}") ^^
+      { case typ ~ title ~ attrs => ResourceRef(typ, title, attrs) } |
+    capWord ~ ("[" ~> expr <~ "]") ^^
+      { case typ ~ title => ResourceRef(typ, title, Seq()) } |
+    capWord ~ ("<|" ~> rexpr <~ "|>") ^^
+      { case typ ~ e => RCollector(typ, e) }
 
   lazy val resourcePair: P[(Expr, Seq[Attribute])] = (expr <~ ":") ~ attributes ^^ {
     case id ~ attr => (id, attr)
@@ -114,7 +114,7 @@ private class PuppetParser extends RegexParsers with PackratParsers {
   // parsers (e.g., atom, bop, etc.) outside this block.
   //
 
-  lazy val parenExpr: P[Expr] = "(" ~ expr ~ ")" ^^ { case _ ~ e ~ _ => e }
+  lazy val parenExpr: P[Expr] = "(" ~> expr <~ ")"
 
   lazy val atom: P[Expr] = positioned {
     "undef" ^^ { _ => EUndef } |
@@ -124,11 +124,11 @@ private class PuppetParser extends RegexParsers with PackratParsers {
     stringVal ^^ { x => EStr(x) } |
     """\d+""".r ^^
       { n => ENum(n.toInt) } |
-    "[" ~ repsep(expr, ",") ~ opt(",") ~ "]" ^^ { case _ ~ es ~ _ ~ _ => EArray(es) } |
-    word ~ "(" ~ repsep(expr, ",") ~ ")" ^^ { case f ~ _ ~ xs ~ _  => EApp(f, xs) } |
+    "[" ~> repsep(expr, ",") <~ (opt(",") ~ "]") ^^ { case es => EArray(es) } |
+    word ~ ("(" ~> repsep(expr, ",") <~ ")") ^^ { case f ~ xs => EApp(f, xs) } |
     ("/" ~> "[^/]*".r <~ "/") ^^ { case expr => ERegex(expr) } |
-    word ~ "[" ~ expr ~ "]" ^^
-      { case typ ~ _ ~ title ~ _ => EResourceRef(typ, title) } |
+    word ~ ("[" ~> expr <~ "]") ^^
+      { case typ ~ title => EResourceRef(typ, title) } |
     parenExpr
   }
 
@@ -138,33 +138,33 @@ private class PuppetParser extends RegexParsers with PackratParsers {
   }
 
   lazy val and: P[Expr] = positioned {
-    not ~ "and" ~ and ^^ { case lhs ~ _ ~ rhs => EAnd(lhs, rhs) } |
+    not ~ ("and" ~> and) ^^ { case lhs ~ rhs => EAnd(lhs, rhs) } |
     not
   }
 
   lazy val or: P[Expr] = positioned {
-    and ~ "or" ~ or ^^ { case lhs ~ _ ~ rhs => EOr(lhs, rhs) } |
+    and ~ ("or" ~> or) ^^ { case lhs ~ rhs => EOr(lhs, rhs) } |
     and
   }
 
   lazy val bop: P[Expr] = positioned {
-    or ~ "==" ~ bop ^^ { case lhs ~ _ ~ rhs => EEq(lhs, rhs) } |
-    or ~ "!=" ~ bop ^^ { case lhs ~ _ ~ rhs => ENot(EEq(lhs, rhs)) } |
-    or ~ "<" ~ bop ^^ { case lhs ~ _ ~ rhs => ELT(lhs, rhs) } |
-    or ~ ">" ~ bop ^^ { case lhs ~ _ ~ rhs => ELT(rhs, lhs) } |
-    or ~ "<=" ~ bop ^^ { case lhs ~ _ ~ rhs => EOr(ELT(lhs, rhs), EEq(lhs, rhs)) } |
-    or ~ ">=" ~ bop ^^ { case lhs ~ _ ~ rhs => EOr(ELT(rhs, lhs), EEq(lhs, rhs)) } |
-    or ~ "=~" ~ bop ^^ { case lhs ~ _ ~ rhs => EMatch(lhs, rhs) } |
-    or ~ "!~" ~ bop ^^ { case lhs ~ _ ~ rhs => ENot(EMatch(lhs, rhs)) } |
-    or ~ "in" ~ bop ^^ { case lhs ~ _ ~ rhs => EIn(lhs, rhs) } |
+    or ~ ("==" ~> bop) ^^ { case lhs ~ rhs => EEq(lhs, rhs) } |
+    or ~ ("!=" ~> bop) ^^ { case lhs ~ rhs => ENot(EEq(lhs, rhs)) } |
+    or ~ ("<" ~> bop) ^^ { case lhs ~ rhs => ELT(lhs, rhs) } |
+    or ~ (">" ~> bop) ^^ { case lhs ~ rhs => ELT(rhs, lhs) } |
+    or ~ ("<=" ~> bop) ^^ { case lhs ~ rhs => EOr(ELT(lhs, rhs), EEq(lhs, rhs)) } |
+    or ~ (">=" ~> bop) ^^ { case lhs ~ rhs => EOr(ELT(rhs, lhs), EEq(lhs, rhs)) } |
+    or ~ ("=~" ~> bop) ^^ { case lhs ~ rhs => EMatch(lhs, rhs) } |
+    or ~ ("!~" ~> bop) ^^ { case lhs ~ rhs => ENot(EMatch(lhs, rhs)) } |
+    or ~ ("in" ~> bop) ^^ { case lhs ~ rhs => EIn(lhs, rhs) } |
     or
   }
 
   lazy val cond: P[Expr] = positioned {
-    bop ~ "?" ~ bop ~ ":" ~ cond ^^
-      { case e1 ~ _ ~ e2 ~ _ ~ e3 => ECond(e1, e2, e3) } |
-    "if" ~ bop ~ "{" ~ expr ~ "}" ~ "else" ~ "{" ~ expr ~ "}" ^^
-      { case _ ~ e1 ~ _ ~ e2 ~ _ ~ _ ~ _ ~ e3 ~ _ => ECond(e1, e2, e3) } |
+    bop ~ ("?" ~> bop <~ ":") ~ cond ^^
+      { case e1 ~ e2 ~ e3 => ECond(e1, e2, e3) } |
+    ("if" ~> bop <~ "{") ~ expr ~ (("}" ~ "else" ~ "{") ~> expr <~ "}") ^^
+      { case e1 ~ e2 ~ e3 => ECond(e1, e2, e3) } |
     bop
   }
 
@@ -180,18 +180,18 @@ private class PuppetParser extends RegexParsers with PackratParsers {
   }
 
   lazy val rexprAtom: P[RExpr] = positioned {
-    "(" ~ rexpr ~ ")" ^^ { case _ ~ e ~ _ => e } |
-    attributeName ~ "=" ~ rexprRhs ^^ { case lhs ~ _ ~ rhs => REAttrEqual(lhs, rhs) } |
-    attributeName ~ "!=" ~ rexprRhs ^^ { case lhs ~ _ ~ rhs => RENot(REAttrEqual(lhs, rhs)) }
+    "(" ~> rexpr <~ ")" |
+    attributeName ~ ("=" ~> rexprRhs) ^^ { case lhs ~ rhs => REAttrEqual(lhs, rhs) } |
+    attributeName ~ ("!=" ~> rexprRhs) ^^ { case lhs ~ rhs => RENot(REAttrEqual(lhs, rhs)) }
   }
 
   lazy val rexprAnd: P[RExpr] = positioned {
-    rexprAtom ~ "and" ~ rexprAnd ^^ { case lhs ~ _ ~ rhs => REAnd(lhs, rhs) } |
+    rexprAtom ~ ("and" ~> rexprAnd) ^^ { case lhs ~ rhs => REAnd(lhs, rhs) } |
     rexprAtom
   }
 
   lazy val rexprOr: P[RExpr] = positioned {
-    rexprAnd ~ "or" ~ rexprOr  ^^ { case lhs ~ _ ~ rhs => REOr(lhs, rhs) } |
+    rexprAnd ~ ("or" ~> rexprOr)  ^^ { case lhs ~ rhs => REOr(lhs, rhs) } |
     rexprAnd
   }
 
