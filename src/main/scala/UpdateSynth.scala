@@ -16,12 +16,12 @@ object UpdateSynth {
   def applySubst(stmt: Statement)(implicit subst: Substitution): Statement = stmt match {
     case SError | SSkip => stmt
     case SLet(id, e, body) => SLet(id, applySubstExpr(e), applySubst(body))
-    case SIf(p, s1, s2) => SIf(applySubstPred(p), applySubst(s1), applySubst(s2))
-    case SSeq(s1, s2) => SSeq(applySubst(s1), applySubst(s2))
-    case SMkdir(path) => SMkdir(applySubstExpr(path))
-    case SCreateFile(path, contents) => SCreateFile(applySubstExpr(path), applySubstExpr(contents))
-    case SRm(path) => SRm(applySubstExpr(path))
-    case SCp(src, dst) => SCp(applySubstExpr(src), applySubstExpr(dst))
+    case SIf(p, s1, s2) => ite(applySubstPred(p), applySubst(s1), applySubst(s2))
+    case SSeq(s1, s2) => seq(applySubst(s1), applySubst(s2))
+    case SMkdir(path) => mkdir(applySubstExpr(path))
+    case SCreateFile(path, contents) => mkfile(applySubstExpr(path), applySubstExpr(contents))
+    case SRm(path) => rm(applySubstExpr(path))
+    case SCp(src, dst) => cp(applySubstExpr(src), applySubstExpr(dst))
   }
 
   def applySubstExpr(expr: Expr)(implicit subst: Substitution): Expr = expr match {
@@ -34,9 +34,9 @@ object UpdateSynth {
 
   def applySubstPred(pred: Pred)(implicit subst: Substitution): Pred = pred match {
     case PTrue | PFalse => pred
-    case PAnd(lhs, rhs) => PAnd(applySubstPred(lhs), applySubstPred(rhs))
-    case POr(lhs, rhs) => POr(applySubstPred(lhs), applySubstPred(rhs))
-    case PNot(pred) => PNot(applySubstPred(pred))
+    case PAnd(lhs, rhs) => applySubstPred(lhs) && applySubstPred(rhs)
+    case POr(lhs, rhs) => applySubstPred(lhs) || applySubstPred(rhs)
+    case PNot(pred) => !applySubstPred(pred)
     case PTestFileState(path, state) => PTestFileState(applySubstExpr(path), state)
   }
 

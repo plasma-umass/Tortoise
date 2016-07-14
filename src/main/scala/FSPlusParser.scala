@@ -21,15 +21,15 @@ private class FSPlusParser extends RegexParsers with PackratParsers {
     "(" ~> pred <~ ")"
 
   lazy val not: P[Pred] =
-    "!" ~> not ^^ { PNot(_) } |
+    "!" ~> not ^^ { p => !p } |
     predAtom
 
   lazy val and: P[Pred] =
-    (not <~ "&&") ~ and ^^ { case lhs ~ rhs => PAnd(lhs, rhs) } |
+    (not <~ "&&") ~ and ^^ { case lhs ~ rhs => lhs && rhs } |
     not
 
   lazy val or: P[Pred] =
-    (and <~ "||") ~ or ^^ { case lhs ~ rhs => POr(lhs, rhs) } |
+    (and <~ "||") ~ or ^^ { case lhs ~ rhs => lhs || rhs } |
     and
 
   lazy val pred: P[Pred] = or
@@ -64,15 +64,15 @@ private class FSPlusParser extends RegexParsers with PackratParsers {
   lazy val stmtAtom: P[Statement] =
     "error" ^^ { _ => SError } |
     "skip" ^^ { _ => SSkip } |
-    "mkdir(" ~> expr <~ ")" ^^ { SMkdir(_) } |
-    ("mkfile(" ~> expr <~ ",") ~ (expr <~ ")") ^^ { case p ~ c => SCreateFile(p, c) } |
-    "rm(" ~> expr <~ ")" ^^ { SRm(_) } |
-    ("cp(" ~> expr <~ ",") ~ (expr <~ ")") ^^ { case src ~ dst => SCp(src, dst) }
+    "mkdir(" ~> expr <~ ")" ^^ { mkdir(_) } |
+    ("mkfile(" ~> expr <~ ",") ~ (expr <~ ")") ^^ { case p ~ c => mkfile(p, c) } |
+    "rm(" ~> expr <~ ")" ^^ { rm(_) } |
+    ("cp(" ~> expr <~ ",") ~ (expr <~ ")") ^^ { case src ~ dst => cp(src, dst) }
 
   lazy val stmt: P[Statement] =
-    ("if" ~> pred <~ "then") ~ stmt ~ ("else" ~> stmt) ^^ { case p ~ s1 ~ s2 => SIf(p, s1, s2) } |
+    ("if" ~> pred <~ "then") ~ stmt ~ ("else" ~> stmt) ^^ { case p ~ s1 ~ s2 => ite(p, s1, s2) } |
     ("let" ~> id <~ "=") ~ expr ~ ("in" ~> stmt) ^^ { case id ~ e ~ body => SLet(id, e, body) } |
-    stmtAtom ~ (";" ~> stmt) ^^ { case s1 ~ s2 => SSeq(s1, s2) } |
+    stmtAtom ~ (";" ~> stmt) ^^ { case s1 ~ s2 => seq(s1, s2) } |
     stmtAtom
 
   lazy val fileState: P[FileState] =
