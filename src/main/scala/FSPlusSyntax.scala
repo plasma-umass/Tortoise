@@ -117,6 +117,10 @@ object FSPlusSyntax {
 
   def seq(p: Statement, q: Statement): Statement = intern(SSeq(p, q))
 
+  def seq(stmts: Statement*): Statement = stmts.foldRight[Statement](SSkip) {
+    case (stmt, acc) => stmt >> acc
+  }
+
   def mkdir(e: Expr): Statement = intern(SMkdir(e))
 
   def mkfile(p: Expr, c: Expr): Statement = intern(SCreateFile(p, c))
