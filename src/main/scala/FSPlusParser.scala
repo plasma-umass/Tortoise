@@ -54,12 +54,19 @@ private class FSPlusParser extends RegexParsers with PackratParsers {
       case str ~ None => CString(str, freshLoc())
     }
 
-  lazy val expr: P[Expr] =
+  lazy val exprBase: P[Expr] =
     path ^^ { EPath(_) } |
     str ^^ { EString(_) } |
     id ^^ { EId(_) } |
     "parent(" ~> expr <~ ")" ^^ { EParent(_) } |
     ("if" ~> pred <~ "then") ~ expr ~ ("else" ~> expr) ^^ { case p ~ e1 ~ e2 => EIf(p, e1, e2) }
+
+  lazy val concat: P[Expr] =
+    concat ~ ("+" ~> exprBase) ^^ { case lhs ~ rhs => EConcat(lhs, rhs) } |
+    exprBase
+
+  lazy val expr: P[Expr] =
+    concat
 
   lazy val stmtAtom: P[Statement] =
     "error" ^^ { _ => SError } |

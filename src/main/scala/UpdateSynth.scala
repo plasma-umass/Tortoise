@@ -12,6 +12,7 @@ import rehearsal.{FSPlusTrace => T}
 
 object UpdateSynth {
   import FSP._
+  import Implicits._
 
   def applySubst(stmt: Statement)(implicit subst: Substitution): Statement = stmt match {
     case SError | SSkip => stmt
@@ -29,6 +30,7 @@ object UpdateSynth {
     case EPath(path) => EPath(applySubstConst(path))
     case EString(str) => EString(applySubstConst(str))
     case EParent(e) => EParent(applySubstExpr(e))
+    case EConcat(lhs, rhs) => EConcat(applySubstExpr(lhs), applySubstExpr(rhs))
     case EIf(p, e1, e2) => EIf(applySubstPred(p), applySubstExpr(e1), applySubstExpr(e2))
   }
 
@@ -46,7 +48,9 @@ object UpdateSynth {
   }
 
   def synthesize(stmt: Statement, cs: Seq[PathConstraint]): Option[Statement] = {
-    val paths = PlusHelpers.stmtPaths(stmt) union cs.map(_.path).toSet
+    val paths = PlusHelpers.stmtPaths(stmt) union cs.flatMap {
+      c => Seq(c.path) ++ c.path.ancestors
+    }.toSet
     val softPaths = PlusHelpers.generateSoftPathConstraints(stmt, paths)
     val softLocs = PlusHelpers.generateSoftLocationConstraints(stmt)
     val soft = softPaths union softLocs
@@ -99,6 +103,23 @@ class UpdateSynth(paths: Set[Path]) {
         }
       )
     ))
+  }
+
+  // Generate Concat function.
+  eval(DeclareFun(SSymbol("resolve"), Seq(pathSort, pathSort), pathSort))
+  for (p1 <- paths) {
+    for (p2 <- paths) {
+      if (paths.contains(p1 resolve p2)) {
+        eval(Assert(
+          Equals(
+            FunctionApplication("resolve".id, Seq(
+              PlusHelpers.stringifyPath(p1).id, PlusHelpers.stringifyPath(p2).id
+            )),
+            PlusHelpers.stringifyPath(p1 resolve p2).id
+          )
+        ))
+      }
+    }
   }
 
   // Generate initial state function (state1?)
@@ -378,6 +399,9 @@ class UpdateSynth(paths: Set[Path]) {
   def convertExpr(expr: T.Expr, n: Int): Term = expr match {
     case T.EHole(loc) => mkHole(loc)
     case T.EParent(e) => FunctionApplication("parent".id, Seq(convertExpr(e, n)))
+    case T.EConcat(lhs, rhs) => FunctionApplication(
+      "resolve".id, Seq(convertExpr(lhs, n), convertExpr(rhs, n))
+    )
     case T.EIf(p, e1, e2) => ITE(convertPred(p, n), convertExpr(e1, n), convertExpr(e2, n))
   }
 

@@ -23,6 +23,7 @@ object FSPlusTrace {
 
   case class EHole(loc: Int) extends Expr
   case class EParent(e: Expr) extends Expr
+  case class EConcat(lhs: Expr, rhs: Expr) extends Expr
   case class EIf(p: Pred, e1: Expr, e2: Expr) extends Expr
 
   sealed trait Statement {

@@ -20,6 +20,11 @@ private[rehearsal] object PlusHelpers {
     case EPath(_) => Set()
     case EString(_) => Set()
     case EParent(e) => exprPaths(e)
+    case EConcat(lhs, rhs) => exprPaths(lhs) union exprPaths(rhs) union exprPaths(lhs).flatMap {
+      p1 => exprPaths(rhs).map {
+        p2 => p1 resolve p2
+      }
+    }
     case EIf(p, e1, e2) => predPaths(p) union exprPaths(e1) union exprPaths(e2)
   }
 
@@ -73,6 +78,7 @@ private[rehearsal] object PlusHelpers {
       case EPath(path) => genConst(path)
       case EString(str) => genConst(str)
       case EParent(e) => genExpr(e)
+      case EConcat(lhs, rhs) => genExpr(lhs) union genExpr(rhs)
       case EIf(pred, e1, e2) => genPred(pred) union genExpr(e1) union genExpr(e2)
     }
 

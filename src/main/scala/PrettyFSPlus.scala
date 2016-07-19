@@ -15,11 +15,21 @@ private[rehearsal] object PrettyFSPlus {
     case SCp(src, dst) => s"cp(${prettyExpr(src)}, ${prettyExpr(dst)})"
   }
 
-  def prettyExpr(expr: Expr): String = expr match {
+  sealed trait ExprCxt
+  case object ConcatCxt extends ExprCxt
+  case object DefaultCxt extends ExprCxt
+
+  def prettyExpr(expr: Expr): String = prettyExpr(DefaultCxt, expr)
+
+  def prettyExpr(cxt: ExprCxt, expr: Expr): String = expr match {
     case EId(id) => id
     case EPath(path) => prettyConst(path)
     case EString(str) => prettyConst(str)
-    case EParent(e) => s"parent(${prettyExpr(e)})"
+    case EParent(e) => s"parent(${prettyExpr(DefaultCxt, e)})"
+    case EConcat(lhs, rhs) => cxt match {
+      case ConcatCxt => s"(${prettyExpr(ConcatCxt, lhs)} + ${prettyExpr(ConcatCxt, rhs)})"
+      case DefaultCxt => s"${prettyExpr(ConcatCxt, lhs)} + ${prettyExpr(ConcatCxt, rhs)}"
+    }
     case EIf(p, e1, e2) => s"if ${prettyPred(p)} then ${prettyExpr(e1)} else ${prettyExpr(e2)}"
   }
 
@@ -29,9 +39,9 @@ private[rehearsal] object PrettyFSPlus {
   }
 
   sealed trait PredCxt
-    case object AndCxt extends PredCxt
-    case object OrCxt extends PredCxt
-    case object NotCxt extends PredCxt
+  case object AndCxt extends PredCxt
+  case object OrCxt extends PredCxt
+  case object NotCxt extends PredCxt
 
   def prettyPred(pred: Pred): String = prettyPred(NotCxt, pred)
 

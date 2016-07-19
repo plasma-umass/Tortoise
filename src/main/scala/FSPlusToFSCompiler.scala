@@ -49,6 +49,11 @@ object FSPlusToFSCompiler {
       case FSP.CPath(path, loc) => FSP.CPath(FSP.Parent(path), loc)
       case const => throw FSPlusCompilationError(s"Expected path, found `$const`.")
     }
+    case FSP.EConcat(lhs, rhs) => (compileExpr(lhs), compileExpr(rhs)) match {
+      case (FSP.CPath(p1, loc), FSP.CPath(p2, _)) => FSP.CPath(FSP.Concat(p1, p2), loc)
+      case (FSP.CPath(p, loc), FSP.CString(s, _)) => FSP.CPath(FSP.Concat(p, FSP.JavaPath(s)), loc)
+      case (const, _) => throw FSPlusCompilationError(s"Expected path, found `$const`.")
+    }
     case FSP.EIf(_, _, _) => throw FSPlusCompilationError(s"Cannot compile if expressions.\nFound: `$expr`")
   }
 

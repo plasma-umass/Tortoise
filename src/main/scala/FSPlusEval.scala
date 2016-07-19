@@ -113,6 +113,11 @@ object FSPlusEval {
       case CPath(p, loc) => CPath(Parent(p), loc)
       case _ => throw MalformedFSPlusException
     }
+    case EConcat(lhs, rhs) => (evalExpr(lhs, state, env), evalExpr(rhs, state, env)) match {
+      case (CPath(p1, loc), CPath(p2, _)) => CPath(Concat(p1, p2), loc)
+      case (CPath(p, loc), CString(str, _)) => CPath(Concat(p, JavaPath(str)), loc)
+      case _ => throw MalformedFSPlusException
+    }
     case EIf(p, e1, e2) => if (evalPred(p, state, env)) {
       evalExpr(e1, state, env)
     } else {
@@ -176,6 +181,7 @@ object FSPlusEval {
     case EString(CString(_, loc)) => T.EHole(loc)
     case EPath(_) | EString(_) => throw MalformedFSPlusException
     case EParent(e) => T.EParent(tracingEvalExpr(e, env))
+    case EConcat(lhs, rhs) => T.EConcat(tracingEvalExpr(lhs, env), tracingEvalExpr(rhs, env))
     case EIf(p, e1, e2) => tracingEvalPred(p, env) match {
       case T.PTrue => tracingEvalExpr(e1, env)
       case T.PFalse => tracingEvalExpr(e2, env)

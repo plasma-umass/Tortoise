@@ -14,11 +14,19 @@ object FSPlusSyntax {
     def path(): Path = this match {
       case JavaPath(p) => p
       case Parent(p) => p.path.getParent
+      case Concat(lhs, rhs) => lhs.path resolve rhs.path
     }
   }
 
   case class JavaPath(p: Path) extends LangPath
   case class Parent(p: LangPath) extends LangPath
+  case class Concat(lhs: LangPath, rhs: LangPath) extends LangPath
+
+  object JavaPath {
+    import java.nio.file.Paths
+
+    def apply(s: String): JavaPath = JavaPath(Paths.get(s))
+  }
 
   sealed trait FileState
 
@@ -78,6 +86,7 @@ object FSPlusSyntax {
   case class EPath(path: Const) extends Expr
   case class EString(str: Const) extends Expr
   case class EParent(e: Expr) extends Expr
+  case class EConcat(lhs: Expr, rhs: Expr) extends Expr
   case class EIf(p: Pred, e1: Expr, e2: Expr) extends Expr
 
   sealed trait Statement {
