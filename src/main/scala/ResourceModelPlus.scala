@@ -137,14 +137,12 @@ object ResourceModelPlus {
     }
 
     case User(name, present, manageHome) => {
-      val uPath = Paths.get(s"/etc/users/$name")
-      val gPath = Paths.get(s"/etc/groups/$name")
-      val hPath = Paths.get(s"/home/$name")
+      val (uRoot, gRoot, hRoot, sub) = ("/etc/users", "/etc/groups", "/home", name)
       val (u, g, h) = (EId("userPath"), EId("groupPath"), EId("homePath"))
 
-      SLet("userPath", EPath(CPath(JavaPath(uPath), ???)),
-        SLet("groupPath", EPath(CPath(JavaPath(gPath), ???)),
-          SLet("homePath", EPath(CPath(JavaPath(hPath), ???)),
+      SLet("userPath", EConcat(EPath(CPath(JavaPath(uRoot), ???)), EString(CString(sub, ???))),
+        SLet("groupPath", EConcat(EPath(CPath(JavaPath(gRoot), ???)), EString(CString(sub, ???))),
+          SLet("homePath", EConcat(EPath(CPath(JavaPath(hRoot), ???)), EString(CString(sub, ???))),
             if (present) {
               val homeCmd = if (manageHome) {
                 ite(PTestFileState(h, DoesNotExist), mkdir(h), SSkip)
@@ -170,7 +168,9 @@ object ResourceModelPlus {
     }
 
     case Group(name, present) => {
-      SLet("path", EPath(CPath(JavaPath(Paths.get(s"/etc/groups/$name")), ???)),
+      val (root, sub) = ("/etc/groups", name)
+
+      SLet("path", EConcat(EPath(CPath(JavaPath(root), ???)), EString(CString(sub, ???))),
         if (present) {
           ite(PTestFileState(EId("path"), DoesNotExist),
             mkdir(EId("path")),
@@ -205,8 +205,9 @@ object ResourceModelPlus {
       }
 
       val stmts = mkdirs ++ mkfiles
+      val (main, sub) = ("/packages", name)
 
-      SLet("path", EPath(CPath(JavaPath(Paths.get(s"/packages/$name")), ???)),
+      SLet("path", EConcat(EPath(CPath(JavaPath(main), ???)), EString(CString(sub, ???))),
         ite(PTestFileState(EId("path"), IsFile),
           SSkip,
           mkfile(EId("path"), EString(CString(content, ???))) >> seq(stmts: _*)
@@ -224,7 +225,10 @@ object ResourceModelPlus {
           )
         )
       }
-      SLet("path", EPath(CPath(JavaPath(s"/packages/$name"), ???)),
+
+      val (root, sub) = ("/packages", name)
+
+      SLet("path", EConcat(EPath(CPath(JavaPath(root), ???)), EString(CString(sub, ???))),
         ite(PTestFileState(EId("path"), DoesNotExist),
           SSkip,
           rm(EId("path")) >> seq(stmts: _*)
@@ -257,10 +261,10 @@ object ResourceModelPlus {
 
     case Cron(present, cmd, user, hour, minute, month, monthday) => {
       val name = cmd.hashCode.toString + "-" + cmd.toLowerCase.filter(c => c >= 'a' && c <= 'z')
-      val path = s"${Settings.modelRoot}/crontab-$name"
+      val (root, sub) = (Settings.modelRoot, s"crontab-$name")
       val content = "arbitrary content"
 
-      SLet("path", EPath(CPath(JavaPath(path), ???)),
+      SLet("path", EConcat(EPath(CPath(JavaPath(root), ???)), EString(CString(sub, ???))),
         if (present) {
           ite(PTestFileState(EId("path"), DoesNotExist),
             mkfile(EId("path"), EString(CString(content, ???))),
@@ -276,7 +280,7 @@ object ResourceModelPlus {
     }
 
     case Host(ensure, name, ip, target) => {
-      val path = s"${Settings.modelRoot}/host-$name"
+      val (root, sub) = (Settings.modelRoot, s"host-$name")
       val content = "Managed by Rehearsal."
 
       val s1 = {
@@ -298,7 +302,7 @@ object ResourceModelPlus {
         )
       }
 
-      SLet("path", EPath(CPath(JavaPath(path), ???)),
+      SLet("path", EConcat(EPath(CPath(JavaPath(root), ???)), EString(CString(sub, ???))),
         SLet("target", EPath(CPath(JavaPath(target), ???)),
           s1 >> s2
         )
