@@ -22,7 +22,7 @@ private[rehearsal] object PrettyFSPlusTrace {
   def prettyExpr(expr: Expr): String = prettyExpr(DefaultCxt, expr)
 
   def prettyExpr(cxt: ExprCxt, expr: Expr): String = expr match {
-    case EHole(loc) => s"\u2022[$loc]"
+    case EHole(_, loc) => s"\u2022[$loc]"
     case EParent(e) => s"parent(${prettyExpr(e)})"
     case EConcat(lhs, rhs) => cxt match {
       case ConcatCxt => s"(${prettyExpr(ConcatCxt, lhs)} + ${prettyExpr(ConcatCxt, rhs)})"
@@ -42,6 +42,7 @@ private[rehearsal] object PrettyFSPlusTrace {
     case PTrue => "true"
     case PFalse => "false"
     case PTestFileState(p, st) => s"${prettyFileState(st)}?(${prettyExpr(p)})"
+    case PTestFileContains(p, cnts) => s"contains?(${prettyExpr(p)}, ${prettyExpr(cnts)})"
     case PNot(PTrue) => "!true"
     case PNot(PFalse) => "!false"
     case PNot(PTestFileState(p, st)) => s"!${prettyFileState(st)}?(${prettyExpr(p)})"
@@ -63,7 +64,7 @@ private[rehearsal] object PrettyFSPlusTrace {
   }
 
   def prettyFileState(st: FileState): String = st match {
-    case IsFile => "file"
+    case IsFile(_) => "file"
     case IsDir => "dir"
     case DoesNotExist => "dne"
   }

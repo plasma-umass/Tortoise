@@ -64,10 +64,11 @@ object FSPlusToFSCompiler {
     case FSP.POr(lhs, rhs) => compilePred(lhs) || compilePred(rhs)
     case FSP.PNot(pred) => !compilePred(pred)
     case FSP.PTestFileState(path, st) => FS.testFileState(constToPath(compileExpr(path)), compileFileState(st))
+    case FSP.PTestFileContains(_, _) => throw FSPlusCompilationError(s"Cannot compile file contains.\nFound: `$pred`")
   }
 
   def compileFileState(st: FSP.FileState): FS.FileState = st match {
-    case FSP.IsFile => FS.IsFile
+    case FSP.IsFile(_) => FS.IsFile
     case FSP.IsDir => FS.IsDir
     case FSP.DoesNotExist => FS.DoesNotExist
   }

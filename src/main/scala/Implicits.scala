@@ -127,12 +127,12 @@ object Implicits {
     }
 
     def ->(st: FSPlusSyntax.FileState) = FSPlusSyntax.PathConstraint(path, st)
-
-
+    def ->(string: String) = FSPlusSyntax.StringConstraint(path, string)
   }
 
   implicit class RichLoc(loc: Int) {
-    def ->(path: Path) = FSPlusSyntax.LocationConstraint(loc, path)
+    def ->(path: Path) = FSPlusSyntax.PathLocationConstraint(loc, path)
+    def ->(str: String) = FSPlusSyntax.StringLocationConstraint(loc, str)
   }
 
 }

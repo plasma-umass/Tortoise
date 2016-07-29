@@ -3,12 +3,16 @@ package rehearsal
 import PrettyFSPlus._
 
 object FSPlusSyntax {
-  type Substitution = Map[Int, Path]
+  type Substitution = Map[Int, Const]
 
   sealed trait Constraint
+  sealed trait LocationConstraint extends Constraint
+  sealed trait ValueConstraint extends Constraint
 
-  case class PathConstraint(path: Path, state: FileState) extends Constraint
-  case class LocationConstraint(loc: Int, path: Path) extends Constraint
+  case class PathConstraint(path: Path, state: FileState) extends ValueConstraint
+  case class StringConstraint(path: Path, contents: String) extends ValueConstraint
+  case class PathLocationConstraint(loc: Int, path: Path) extends LocationConstraint
+  case class StringLocationConstraint(loc: Int, string: String) extends LocationConstraint
 
   sealed trait LangPath {
     def path(): Path = this match {
@@ -30,7 +34,7 @@ object FSPlusSyntax {
 
   sealed trait FileState
 
-  case object IsFile extends FileState
+  case class IsFile(str: String) extends FileState
   case object IsDir extends FileState
   case object DoesNotExist extends FileState
 
@@ -68,6 +72,7 @@ object FSPlusSyntax {
   case class POr private[FSPlusSyntax](lhs: Pred, rhs: Pred) extends Pred
   case class PNot private[FSPlusSyntax](pred: Pred) extends Pred
   case class PTestFileState(path: Expr, state: FileState) extends Pred
+  case class PTestFileContains(path: Expr, contents: Expr) extends Pred
 
   sealed trait Const {
     def pretty: String = prettyConst(this)

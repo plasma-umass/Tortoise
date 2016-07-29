@@ -15,13 +15,19 @@ object FSPlusTrace {
   case class POr(lhs: Pred, rhs: Pred) extends Pred
   case class PNot(pred: Pred) extends Pred
   case class PTestFileState(path: Expr, state: FileState) extends Pred
+  case class PTestFileContains(path: Expr, contents: Expr) extends Pred
+
+  sealed trait Type
+  
+  case object TPath extends Type
+  case object TString extends Type
 
   sealed trait Expr {
     def pretty: String = prettyExpr(this)
     override def toString: String = this.pretty
   }
 
-  case class EHole(loc: Int) extends Expr
+  case class EHole(typ: Type, loc: Int) extends Expr
   case class EParent(e: Expr) extends Expr
   case class EConcat(lhs: Expr, rhs: Expr) extends Expr
   case class EIf(p: Pred, e1: Expr, e2: Expr) extends Expr

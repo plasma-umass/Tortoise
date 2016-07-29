@@ -15,7 +15,8 @@ private class FSPlusParser extends RegexParsers with PackratParsers {
   lazy val predAtom: P[Pred] =
     "true" ^^ { _ => PTrue } |
     "false" ^^ { _ => PFalse } |
-    "file?(" ~> expr <~ ")" ^^ { case path => PTestFileState(path, IsFile) } |
+    "file?(" ~> expr <~ ")" ^^ { case path => PTestFileState(path, IsFile("")) } |
+    "contains?(" ~> expr ~ ("," ~> expr <~ ")") ^^ { case path ~ conts => PTestFileContains(path, conts) } | 
     "dir?(" ~> expr <~ ")" ^^ { case path => PTestFileState(path, IsDir) } |
     "dne?(" ~> expr <~ ")" ^^ { case path => PTestFileState(path, DoesNotExist) } |
     "(" ~> pred <~ ")"
@@ -82,9 +83,10 @@ private class FSPlusParser extends RegexParsers with PackratParsers {
     stmtAtom ~ (";" ~> stmt) ^^ { case s1 ~ s2 => seq(s1, s2) } |
     stmtAtom
 
+  //FIXME(rachit): This may be wrong
   lazy val fileState: P[FileState] =
-    "file" ^^ { _ => IsFile       } |
-    "File" ^^ { _ => IsFile       } |
+    "file" ^^ { _ => IsFile("")   } |
+    "File" ^^ { _ => IsFile("")   } |
     "dir"  ^^ { _ => IsDir        } |
     "Dir"  ^^ { _ => IsDir        } |
     "null" ^^ { _ => DoesNotExist } |
@@ -95,15 +97,23 @@ private class FSPlusParser extends RegexParsers with PackratParsers {
       case path ~ st => PathConstraint(Paths.get(path), st)
     }
 
-  lazy val pathConstraints: P[Seq[PathConstraint]] =
-    repsep(pathConstraint, ",")
+  lazy val stringConstraint: P[StringConstraint] =
+    angleQuotedText ~ ("=>" ~> quotedText) ^^ {
+      case path ~ str => StringConstraint(Paths.get(path), str)
+    }
+
+  lazy val constraint: P[ValueConstraint] =
+    stringConstraint | pathConstraint
+
+  lazy val constraints: P[Seq[ValueConstraint]] = 
+    repsep(constraint, ",") 
 }
 
 object FSPlusParser {
   private val parser = new FSPlusParser()
   import parser._
 
-  def parseConstraints(str: String): Seq[PathConstraint] = parseAll(pathConstraints, str) match {
+  def parseConstraints(str: String): Seq[ValueConstraint] = parseAll(constraints, str) match {
     case Success(r, _) => r
     case m => throw new ParseError(s"$m")
   }

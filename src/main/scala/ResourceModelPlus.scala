@@ -50,14 +50,14 @@ object ResourceModelPlus {
 
     case EnsureFile(p, CInline(c)) => {
       SLet("path", EPath(CPath(JavaPath(p), ???)),
-        ite(PTestFileState(EId("path"), IsFile), rm(EId("path")), SSkip) >> mkfile(EId("path"), EString(CString(c, ???)))
+        ite(PTestFileState(EId("path"), IsFile("")), rm(EId("path")), SSkip) >> mkfile(EId("path"), EString(CString(c, ???)))
       )
     }
 
     case EnsureFile(p, CFile(s)) => {
       SLet("path", EPath(CPath(JavaPath(p), ???)),
         SLet("srcPath", EPath(CPath(JavaPath(Paths.get(s)), ???)),
-          ite(PTestFileState(EId("path"), IsFile), rm(EId("path")), SSkip) >> cp(EId("srcPath"), EId("path"))
+          ite(PTestFileState(EId("path"), IsFile("")), rm(EId("path")), SSkip) >> cp(EId("srcPath"), EId("path"))
         )
       )
     }
@@ -65,7 +65,7 @@ object ResourceModelPlus {
     case File(p, CInline(c), false) => {
       SLet("path", EPath(CPath(JavaPath(p), ???)),
         SLet("content", EString(CString(c, ???)),
-          ite(PTestFileState(EId("path"), IsFile),
+          ite(PTestFileState(EId("path"), IsFile("")),
             rm(EId("path")) >> mkfile(EId("path"), EId("content")),
             ite(PTestFileState(EId("path"), DoesNotExist),
               mkfile(EId("path"), EId("content")),
@@ -84,7 +84,7 @@ object ResourceModelPlus {
     case File(p, CFile(s), false) => {
       SLet("srcPath", EPath(CPath(JavaPath(Paths.get(s)), ???)),
         SLet("dstPath", EPath(CPath(JavaPath(p), ???)),
-          ite(PTestFileState(EId("dstPath"), IsFile),
+          ite(PTestFileState(EId("dstPath"), IsFile("")),
             rm(EId("dstPath")) >> cp(EId("srcPath"), EId("dstPath")),
             ite(PTestFileState(EId("dstPath"), DoesNotExist),
               cp(EId("srcPath"), EId("dstPath")),
@@ -98,7 +98,7 @@ object ResourceModelPlus {
     case File(p, CFile(s), true) => {
       SLet("srcPath", EPath(CPath(JavaPath(Paths.get(s)), ???)),
         SLet("dstPath", EPath(CPath(JavaPath(p), ???)),
-          ite(PTestFileState(EId("dstPath"), IsDir) || PTestFileState(EId("dstPath"), IsFile),
+          ite(PTestFileState(EId("dstPath"), IsDir) || PTestFileState(EId("dstPath"), IsFile("")),
             rm(EId("dstPath")),
             SSkip
           ) >> cp(EId("srcPath"), EId("dstPath"))
@@ -108,7 +108,7 @@ object ResourceModelPlus {
 
     case AbsentPath(p, false) => {
       SLet("path", EPath(CPath(JavaPath(p), ???)),
-        ite(PTestFileState(EId("path"), IsFile),
+        ite(PTestFileState(EId("path"), IsFile("")),
           rm(EId("path")),
           SSkip
         )
@@ -128,7 +128,7 @@ object ResourceModelPlus {
       SLet("path", EPath(CPath(JavaPath(p), ???)),
         ite(PTestFileState(EId("path"), IsDir),
           SSkip,
-          ite(PTestFileState(EId("path"), IsFile),
+          ite(PTestFileState(EId("path"), IsFile("")),
             rm(EId("path")),
             SSkip
           ) >> mkdir(EId("path"))
@@ -207,8 +207,9 @@ object ResourceModelPlus {
       val stmts = mkdirs ++ mkfiles
       val (main, sub) = ("/packages", name)
 
+      // apt does not remove pre-existing conflicting files.
       SLet("path", EConcat(EPath(CPath(JavaPath(main), ???)), EString(CString(sub, ???))),
-        ite(PTestFileState(EId("path"), IsFile),
+        ite(PTestFileState(EId("path"), IsFile("")),
           SSkip,
           mkfile(EId("path"), EString(CString(content, ???))) >> seq(stmts: _*)
         )
@@ -239,12 +240,12 @@ object ResourceModelPlus {
     case self@SshAuthorizedKey(user, present, _, key) => {
       SLet("path", EPath(CPath(JavaPath(self.keyPath), ???)),
         if (present) {
-          ite(PTestFileState(EId("path"), IsFile),
+          ite(PTestFileState(EId("path"), IsFile("")),
             rm(EId("path")),
             SSkip
           ) >> mkfile(EId("path"), EString(CString(key, ???)))
         } else {
-          ite(PTestFileState(EId("path"), IsFile),
+          ite(PTestFileState(EId("path"), IsFile("")),
             rm(EId("path")),
             SSkip
           )
@@ -253,7 +254,7 @@ object ResourceModelPlus {
     }
 
     case self@Service(name) => {
-      ite(PTestFileState(EPath(CPath(JavaPath(self.path), ???)), IsFile),
+      ite(PTestFileState(EPath(CPath(JavaPath(self.path), ???)), IsFile("")),
         SSkip,
         SError
       )

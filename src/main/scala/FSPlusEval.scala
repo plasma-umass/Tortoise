@@ -7,21 +7,9 @@ case class FSPlusEvalError(msg: String) extends RuntimeException(msg)
 case object MalformedFSPlusException extends RuntimeException("Tried to evaluate a malformed FS+ program.")
 
 object FSPlusEval {
-  sealed trait FState {
-    def toFileState(): FileState = this match {
-      case FDir => IsDir
-      case FFile(_) => IsFile
-      case FEmpty => DoesNotExist
-    }
-  }
-
-  case object FDir extends FState
-  case class FFile(hash: String) extends FState
-  case object FEmpty extends FState
-
-  type State = Map[Path, FState]
+  type State = Map[Path, FileState]
   def emptyState: State = Map()
-  def defaultState: State = Map(java.nio.file.Paths.get("/") -> FDir)
+  def defaultState: State = Map(java.nio.file.Paths.get("/") -> IsDir)
 
   type Env = Map[String, Const]
   def emptyEnv: Env = Map()
@@ -39,7 +27,7 @@ object FSPlusEval {
     case None => throw FSPlusEvalError(s"Unbound identifier $id.")
   }
 
-  def lookup(p: LangPath, st: State): Option[FState] = st.get(p.path)
+  def lookup(p: LangPath, st: State): Option[FileState] = st.get(p.path)
 
   def eval(stmt: Statement): Option[State] = eval(stmt, defaultState, emptyEnv)
 
@@ -60,31 +48,31 @@ object FSPlusEval {
     }
     case SMkdir(e) => evalExpr(e, state, env) match {
       case CPath(p, loc) => lookup(p, state) match {
-        case Some(FEmpty) => Some(state + (p.path -> FDir))
-        case None => Some(state + (p.path -> FDir))
+        case Some(DoesNotExist) => Some(state + (p.path -> IsDir))
+        case None => Some(state + (p.path -> IsDir))
         case _ => None
       }
       case _ => None
     }
     case SCreateFile(e1, e2) => (evalExpr(e1, state, env), evalExpr(e2, state, env)) match {
       case (CPath(p, l1), CString(c, l2)) => lookup(p, state) match {
-        case Some(FEmpty) => Some(state + (p.path -> FFile(c)))
-        case None => Some(state + (p.path -> FFile(c)))
+        case Some(DoesNotExist) => Some(state + (p.path -> IsFile(c)))
+        case None => Some(state + (p.path -> IsFile(c)))
         case Some(_) => None
       }
       case _ => None
     }
     case SRm(e) => evalExpr(e, state, env) match {
       case CPath(p, loc) => lookup(p, state) match {
-        case Some(FEmpty) => None
-        case Some(_) => Some(state + (p.path -> FEmpty))
+        case Some(DoesNotExist) => None
+        case Some(_) => Some(state + (p.path -> DoesNotExist))
         case None => None
       }
       case _ => None
     }
     case SCp(e1, e2) => (evalExpr(e1, state, env), evalExpr(e2, state, env)) match {
       case (CPath(src, l1), CPath(dst, l2)) => (lookup(src, state), lookup(dst, state)) match {
-        case (Some(FEmpty), _) => None
+        case (Some(DoesNotExist), _) => None
         case (None, _) => None
         case (Some(st), Some(_)) => Some(state + (dst.path -> st))
         case (Some(st), None) => Some(state + (dst.path -> st))
@@ -99,9 +87,22 @@ object FSPlusEval {
     case PAnd(lhs, rhs) => evalPred(lhs, state, env) && evalPred(rhs, state, env)
     case POr(lhs, rhs) => evalPred(lhs, state, env) || evalPred(rhs, state, env)
     case PNot(p) => !evalPred(p, state, env)
+    case PTestFileState(p, IsFile(_)) => evalExpr(p, state, env) match {
+      case CPath(p, _) => state.get(p.path) match {
+        case Some(IsFile(_)) => true
+        case _ => false
+      }
+      case _ => throw MalformedFSPlusException
+    }
     case PTestFileState(p, st) => evalExpr(p, state, env) match {
       case CPath(p, _) => state.get(p.path) == Some(st)
       case _ => throw MalformedFSPlusException
+    }
+    case PTestFileContains(p, contents) => { 
+      (evalExpr(p, state, env), evalExpr(contents, state, env)) match {
+        case (CPath(p, _), CString(s, _)) => state.get(p.path) == Some(IsFile(s))
+        case _ => throw MalformedFSPlusException
+      }
     }
   }
 
@@ -127,6 +128,7 @@ object FSPlusEval {
 
   def tracingEval(stmt: Statement): T.Statement = tracingEval(stmt, Map())
 
+  // Partial Eval
   def tracingEval(stmt: Statement, env: TraceEnv): T.Statement = stmt match {
     case SError => T.SError
     case SSkip => T.SSkip
@@ -173,12 +175,15 @@ object FSPlusEval {
       case p => T.PNot(p)
     }
     case PTestFileState(p, st) => T.PTestFileState(tracingEvalExpr(p, env), st)
+    case PTestFileContains(p, contents) => T.PTestFileContains(
+      tracingEvalExpr(p, env), tracingEvalExpr(contents, env)
+    )
   }
 
   def tracingEvalExpr(expr: Expr, env: TraceEnv): T.Expr = expr match {
     case EId(id) => lookup(id, env)
-    case EPath(CPath(_, loc)) => T.EHole(loc)
-    case EString(CString(_, loc)) => T.EHole(loc)
+    case EPath(CPath(_, loc)) => T.EHole(T.TPath, loc)
+    case EString(CString(_, loc)) => T.EHole(T.TString, loc)
     case EPath(_) | EString(_) => throw MalformedFSPlusException
     case EParent(e) => T.EParent(tracingEvalExpr(e, env))
     case EConcat(lhs, rhs) => T.EConcat(tracingEvalExpr(lhs, env), tracingEvalExpr(rhs, env))

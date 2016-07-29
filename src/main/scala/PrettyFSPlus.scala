@@ -49,8 +49,7 @@ private[rehearsal] object PrettyFSPlus {
     case PTrue => "true"
     case PFalse => "false"
     case PTestFileState(p, st) => s"${prettyFileState(st)}?(${prettyExpr(p)})"
-    case PNot(PTrue) => "!true"
-    case PNot(PFalse) => "!false"
+    case PTestFileContains(p, cts) => s"contains?(${prettyExpr(p)}, ${prettyExpr(cts)})"
     case PNot(PTestFileState(p, st)) => s"!${prettyFileState(st)}?(${prettyExpr(p)})"
     case PNot(p) => s"!(${prettyPred(NotCxt, p)})"
     case PAnd(lhs, rhs) => {
@@ -70,7 +69,7 @@ private[rehearsal] object PrettyFSPlus {
   }
 
   def prettyFileState(st: FileState): String = st match {
-    case IsFile => "file"
+    case IsFile(_) => "file"
     case IsDir => "dir"
     case DoesNotExist => "dne"
   }

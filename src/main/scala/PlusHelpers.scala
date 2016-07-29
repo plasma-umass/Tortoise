@@ -6,55 +6,72 @@ import FSPlusSyntax._
 import Implicits._
 
 private[rehearsal] object PlusHelpers {
-  def predPaths(pred: Pred): Set[Path] = pred match {
-    case PTrue | PFalse => Set()
-    case PAnd(lhs, rhs) => predPaths(lhs) union predPaths(rhs)
-    case POr(lhs, rhs) => predPaths(lhs) union predPaths(rhs)
-    case PNot(pred) => predPaths(pred)
-    case PTestFileState(path, _) => exprPaths(path)
-  }
+  def calculateConsts(stmt: Statement): (Set[Path], Set[String]) = {
+    type Result = (Set[Path], Set[String])
 
-  def exprPaths(expr: Expr): Set[Path] = expr match {
-    case EId(_) => Set()
-    case EPath(CPath(p, _)) => p.path.ancestors union Set(p.path)
-    case EPath(_) => Set()
-    case EString(_) => Set()
-    case EParent(e) => exprPaths(e)
-    case EConcat(lhs, rhs) => exprPaths(lhs) union exprPaths(rhs) union exprPaths(lhs).flatMap {
-      p1 => exprPaths(rhs).map {
-        p2 => p1 resolve p2
-      }
+    implicit class RichTuple(tup: Result) {
+      def union(other: Result): Result = (tup._1 union other._1, tup._2 union other._2)
     }
-    case EIf(p, e1, e2) => predPaths(p) union exprPaths(e1) union exprPaths(e2)
+
+    def genPred(pred: Pred): Result = pred match {
+      case PTrue | PFalse => (Set(), Set())
+      case PAnd(lhs, rhs) => genPred(lhs) union genPred(rhs)
+      case POr(lhs, rhs) => genPred(lhs) union genPred(rhs)
+      case PNot(pred) => genPred(pred)
+      case PTestFileState(path, _) => genExpr(path)
+      case PTestFileContains(path, contents) => genExpr(path) union genExpr(contents)
+    }
+
+    def genExpr(expr: Expr): Result = expr match {
+      case EId(_) => (Set(), Set())
+      case EPath(CPath(p, _)) => (p.path.ancestors union Set(p.path), Set())
+      case EPath(_) => (Set(), Set())               // Should not trigger
+      case EString(CString(s, _)) => (Set(), Set(s))
+      case EString(_) => (Set(), Set())             // Should not trigger
+      case EParent(e) => genExpr(e)
+      case EConcat(lhs, rhs) => genExpr(lhs) union genExpr(rhs) union (genExpr(lhs)._1.flatMap {
+        p1 => genExpr(rhs)._1.map {
+          p2 => p1 resolve p2
+        }
+      }, Set())
+      case EIf(p, e1, e2) => genPred(p) union genExpr(e1) union genExpr(e2)
+    }
+
+    def genStmt(stmt: Statement): Result = stmt match {
+      case SError => (Set(), Set())
+      case SSkip => (Set(), Set())
+      case SLet(_, e, s) => genExpr(e) union genStmt(s)
+      case SIf(p, s1, s2) => genPred(p) union genStmt(s1) union genStmt(s2)
+      case SSeq(s1, s2) => genStmt(s1) union genStmt(s2)
+      case SMkdir(path) => genExpr(path)
+      case SCreateFile(path, str) => genExpr(path) union genExpr(str)
+      case SRm(path) => genExpr(path)
+      case SCp(src, dst) => genExpr(src) union genExpr(dst)
+    }
+    
+    genStmt(stmt)
   }
 
-  def stmtPaths(stmt: Statement): Set[Path] = stmt match {
-    case SError => Set()
-    case SSkip => Set()
-    case SLet(_, e, s) => exprPaths(e) union stmtPaths(s)
-    case SIf(p, s1, s2) => predPaths(p) union stmtPaths(s1) union stmtPaths(s2)
-    case SSeq(s1, s2) => stmtPaths(s1) union stmtPaths(s2)
-    case SMkdir(path) => exprPaths(path)
-    case SCreateFile(path, _) => exprPaths(path)
-    case SRm(path) => exprPaths(path)
-    case SCp(src, dst) => exprPaths(src) union exprPaths(dst)
-  }
-
-  def generateSoftPathConstraints(stmt: Statement, paths: Set[Path]): Seq[PathConstraint] = {
+  def generateSoftValueConstraints(stmt: Statement, paths: Set[Path]): Seq[ValueConstraint] = {
     FSPlusEval.eval(stmt) match {
       case Some(state) => {
         val changed = state.keys.toSet
         val unchanged = paths -- changed
 
         val changedCs = state.map {
-          case (path, st) => PathConstraint(path, st.toFileState())
+          case (path, st) => PathConstraint(path, st)
         }.toSeq
 
         val unchangedCs = unchanged.map {
           path => PathConstraint(path, DoesNotExist)
         }.toSeq
 
-        changedCs ++ unchangedCs
+        val strCs = state.toSeq.map {
+          case (path, IsFile(str)) => Some(StringConstraint(path, str))
+          case _ => None
+        }.flatten
+
+        changedCs ++ unchangedCs ++ strCs
       }
       case None => Seq()
     }
@@ -88,18 +105,46 @@ private[rehearsal] object PlusHelpers {
       case POr(lhs, rhs) => genPred(lhs) union genPred(rhs)
       case PNot(pred) => genPred(pred)
       case PTestFileState(path, _) => genExpr(path)
+      case PTestFileContains(path, _) => genExpr(path)
     }
 
     def genConst(const: Const): Set[LocationConstraint] = const match {
-      case CPath(p, loc) => Set(LocationConstraint(loc, p.path))
-      case CString(_, _) => Set()
+      case CPath(p, loc) => Set(PathLocationConstraint(loc, p.path))
+      case CString(str, loc) => Set(StringLocationConstraint(loc, str))
     }
 
     genStmt(stmt).toSeq
   }
 
-  // This probably needs to be improved.
-  def stringifyPath(path: Path): String = path.toString.replace('/', '$')
+  val rootValue = "__ROOT_1337_H4x0R__"
 
-  def destringifyPath(str: String): Path = Paths.get(str.replace('$', '/'))
+  def stringifyPath(path: Path): String = if (path == Paths.get("/")) {
+    rootValue
+  } else {
+    path.toString
+  }
+
+  def destringifyPath(str: String): Path = if (str == rootValue) {
+    Paths.get("/") 
+  } else {
+    Paths.get(str)
+  }
+
+  case class StringBiMap private (forward: Map[String, String], inverse: Map[String, String]) {
+    def rep(left: String): String = forward(left)
+    def original(right: String): String = inverse(right)
+    
+    def getRep(left: String): Option[String] = forward.get(left)
+    def getOriginal(right: String): Option[String] = inverse.get(right)
+
+    def +(pair: (String, String)): StringBiMap = StringBiMap(forward + pair, inverse + pair.swap)
+  }
+
+  object StringBiMap {
+    def apply(): StringBiMap = StringBiMap(Map[String, String](), Map[String, String]())
+
+    def apply(map: Map[String, String]): StringBiMap = StringBiMap(map, map.map(_.swap))
+
+    def apply(pairs: (String, String)*): StringBiMap = StringBiMap(pairs.toMap)
+  }
 }
