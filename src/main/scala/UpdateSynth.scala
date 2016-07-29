@@ -465,12 +465,10 @@ class UpdateSynth(paths: Set[Path]) {
         count.id
       }
     }
-    val sumTerm = counts.foldRight[Term](SNumeral(0)) {
-      case (count, acc) => Add(count, acc)
-    }
+
     val sum = freshName("sum")
     eval(DeclareConst(sum, IntSort()))
-    eval(Assert(Equals(sum.id, sumTerm)))
+    eval(Assert(Equals(sum.id, FunctionApplication("+".id, counts))))
 
     // Optimization...
     var lo = 0
