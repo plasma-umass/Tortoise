@@ -17,42 +17,8 @@ object UpdateSynth {
   import FSP._
   import Implicits._
 
-  def applySubst(stmt: Statement)(implicit subst: Substitution): Statement = stmt match {
-    case SError | SSkip => stmt
-    case SLet(id, e, body) => SLet(id, applySubstExpr(e), applySubst(body))
-    case SIf(p, s1, s2) => ite(applySubstPred(p), applySubst(s1), applySubst(s2))
-    case SSeq(s1, s2) => seq(applySubst(s1), applySubst(s2))
-    case SMkdir(path) => mkdir(applySubstExpr(path))
-    case SCreateFile(path, contents) => mkfile(applySubstExpr(path), applySubstExpr(contents))
-    case SRm(path) => rm(applySubstExpr(path))
-    case SCp(src, dst) => cp(applySubstExpr(src), applySubstExpr(dst))
-  }
-
-  def applySubstExpr(expr: Expr)(implicit subst: Substitution): Expr = expr match {
-    case EId(_) => expr
-    case EPath(path) => EPath(applySubstConst(path))
-    case EString(str) => EString(applySubstConst(str))
-    case EParent(e) => EParent(applySubstExpr(e))
-    case EConcat(lhs, rhs) => EConcat(applySubstExpr(lhs), applySubstExpr(rhs))
-    case EIf(p, e1, e2) => EIf(applySubstPred(p), applySubstExpr(e1), applySubstExpr(e2))
-  }
-
-  def applySubstPred(pred: Pred)(implicit subst: Substitution): Pred = pred match {
-    case PTrue | PFalse => pred
-    case PAnd(lhs, rhs) => applySubstPred(lhs) && applySubstPred(rhs)
-    case POr(lhs, rhs) => applySubstPred(lhs) || applySubstPred(rhs)
-    case PNot(pred) => !applySubstPred(pred)
-    case PTestFileState(path, state) => PTestFileState(applySubstExpr(path), state)
-    case PTestFileContains(p, cts) => PTestFileContains(applySubstExpr(p), applySubstExpr(cts))
-  }
-
-  def applySubstConst(const: Const)(implicit subst: Substitution): Const = const match {
-    case CPath(path, loc) if subst.contains(loc) => subst(loc)
-    case CString(str, loc) if subst.contains(loc) => subst(loc)
-    case CPath(_, _) | CString(_, _) => const
-  }
-
-  def synthesize(stmt: Statement, cs: Seq[ValueConstraint]): Option[Statement] = {
+  
+  def synthesize(stmt: Statement, cs: Seq[ValueConstraint]): Option[Substitution] = {
     val (paths, strings) = PlusHelpers.calculateConsts(stmt)
     val pathCs = cs.filter(_.isInstanceOf[PathConstraint]).map(_.asInstanceOf[PathConstraint])
     val allPaths = pathCs.flatMap(c => Seq(c.path) ++ c.path.ancestors).toSet ++ paths
@@ -67,9 +33,7 @@ object UpdateSynth {
     val impl = new UpdateSynth(allPaths, allStrings)
 
     val trace = FSPlusEval.tracingEval(stmt)
-    impl.synthesize(trace, cs, soft).map {
-      subst => applySubst(stmt)(subst)
-    }
+    impl.synthesize(trace, cs, soft)
   }
 }
 

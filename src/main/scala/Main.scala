@@ -26,13 +26,16 @@ object Main extends App {
     val constraints = FSPlusParser.parseConstraints(config.string("constraints"))
     
     Try({
+      import SubstitutionPuppet._
+
       val manifest = PuppetParser.parseFile(fileName)
       val prog = manifest.eval.resourceGraph.fsGraph("ubuntu").statement
-      UpdateSynth.synthesize(prog, constraints)
+      val optSubst = UpdateSynth.synthesize(prog, constraints)
+      optSubst.map(subst => applySubst(manifest)(convertSubst(subst)))
     }) match {
-       case Success(Some(stmt)) => {
+       case Success(Some(m)) => {
         println("Successfully synthesized an updated program:")
-        println(stmt)
+        println(m)
       }
       case Success(None) => {
         println("An update could not be synthesized given those constraints.")
@@ -57,7 +60,11 @@ object Main extends App {
     val fileName = config.string("filename")
     val constraints = FSPlusParser.parseConstraints(config.string("constraints"))
 
-    Try(UpdateSynth.synthesize(FSPlusParser.parseFile(fileName), constraints)) match {
+    Try({
+      val prog = FSPlusParser.parseFile(fileName)
+      val optSubst = UpdateSynth.synthesize(prog, constraints)
+      optSubst.map(subst => SubstitutionPlus.applySubst(prog)(subst))
+    }) match {
       case Success(Some(stmt)) => {
         println("Successfully synthesized an updated program:")
         println(stmt)
