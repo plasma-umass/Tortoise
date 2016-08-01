@@ -10,6 +10,7 @@ object FSSyntax {
         case IsDir => 1
         case DoesNotExist => 2
         case IsEmptyDir => 3
+        case Contains(c) => 4 + c.hashCode
       }
       val x = toInt(this).compare(toInt(that))
       if (x > 0) 1 else if (x < 0) -1 else 0
@@ -21,6 +22,7 @@ object FSSyntax {
   case object IsDir extends FileState
   case object IsEmptyDir extends FileState
   case object DoesNotExist extends FileState
+  case class Contains(content: String) extends FileState
 
   sealed trait Pred {
     def size = Helpers.predSize(this)

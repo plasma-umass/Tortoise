@@ -1,0 +1,4 @@
+mkdir(</root>);
+mkfile(</root/awe>, "Syntax on");
+rm(</root/awe>);
+mkfile(<root/thEnigma>, "1337")

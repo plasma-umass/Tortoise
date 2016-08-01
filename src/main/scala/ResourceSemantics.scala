@@ -4,7 +4,7 @@ object ResourceSemantics {
 
   import Implicits._
   import PuppetSyntax._
-  import ResourceModel._
+  import ResourceModelPlus._
 
   case class FSCompileError(msg: String) extends RuntimeException(msg)
 

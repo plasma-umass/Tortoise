@@ -106,6 +106,9 @@ object FSPlusSyntax {
       case (SIf(a, SSkip, SError), SIf(b, SSkip, SError)) => ite(a && b, SSkip, SError)
       case _ => seq(this, s2)
     }
+
+    lazy val (paths, strings) = PlusHelpers.calculateConsts(this)
+    lazy val size = PlusHelpers.size(this)
   }
 
   case object SError extends Statement

@@ -38,7 +38,9 @@ private object PuppetEval {
       PuppetParser.parseExpr(strPrime) match {
         case Some(expr) => eval(expr) match {
           case EStr(s) => s
-          case _ => throw EvalError(s"None string expression evaluated during string interpolation: $expr")
+          case _ => throw EvalError(
+            s"None string expression evaluated during string interpolation: $expr"
+          )
         }
         case m => throw EvalError(s"Could not parse interpolated expression: $m")
       }
@@ -570,7 +572,9 @@ private object PuppetEval {
       }
     }
 
-    def mkResourceVal(node: Node, attrsWithNode: List[(Node, String, Expr)]): (FSGraph.Key, ResourceVal) = {
+    def mkResourceVal(
+      node: Node, attrsWithNode: List[(Node, String, Expr)]
+    ): (FSPlusGraph.Key, ResourceVal) = {
 
       val attrs = attrsWithNode.map(tuple => (tuple._2, tuple._3)).toMap
       node -> ResourceVal(node.typ, node.title, attrs)
@@ -578,7 +582,7 @@ private object PuppetEval {
 
     def loadEdge(fact: Fact) = fact match {
       case Fact("real_edge", List(src, dst)) =>
-        DiEdge[FSGraph.Key](resourceToTerm.invert(src), resourceToTerm.invert(dst))
+        DiEdge[FSPlusGraph.Key](resourceToTerm.invert(src), resourceToTerm.invert(dst))
     }
 
     val attrByResource = attrFacts.map(loadAttr).groupBy(_._1)
@@ -590,7 +594,7 @@ private object PuppetEval {
     if (g.isAcyclic == false) {
       throw EvalError("dependency cycle found")
     }
-    EvaluatedManifest(resources, g)
+    EvaluatedManifest(resources, g, manifest.locMap)
   }
 
 }

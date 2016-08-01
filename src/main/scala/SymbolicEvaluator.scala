@@ -2,7 +2,7 @@ package rehearsal
 
 import edu.umass.cs.extras.Implicits._
 import FSEvaluator._
-import smtlib.theories.Core.{BoolSort, Equals}
+import smtlib.theories.Core.{BoolSort, Equals, And}
 import edu.umass.cs.smtlib._
 import smtlib._
 import parser._
@@ -153,6 +153,12 @@ class SymbolicEvaluatorImpl(allPaths: List[Path],
     case PTestFileState(p, DoesNotExist) => Equals(st.paths(p), "DoesNotExist".id)
     case PTestFileState(p, IsFile) =>
       FunctionApplication("is-IsFile".id, Seq(st.paths(p)))
+    case PTestFileState(p, Contains(c)) => {
+      val fileExists = evalPred(st, testFileState(p, IsFile))
+      val fileContains = Equals(FunctionApplication("hash".id, Seq(st.paths(p))), hashToZ3(c))
+      val pred = And(fileExists, fileContains)
+      pred
+    }
   }
 
   def predEquals(a: Pred, b: Pred): Boolean = smt.pushPop {

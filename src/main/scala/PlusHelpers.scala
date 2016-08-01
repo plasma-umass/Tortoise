@@ -116,6 +116,35 @@ private[rehearsal] object PlusHelpers {
     genStmt(stmt).toSeq
   }
 
+  def size(stmt: Statement) = {
+    def stmtSize(stmt: Statement): Int = stmt match {
+      case SError | SSkip => 1
+      case SMkdir(_) | SCp(_, _) | SCreateFile(_, _) | SRm(_) => 1
+      case SSeq(s1, s2) => 1 + stmtSize(s1) + stmtSize(s2)
+      case SIf(p, s1, s2) => 1 + predSize(p) + stmtSize(s1) + stmtSize(s2)
+      case SLet(_, expr, body) => 1 + exprSize(expr) + stmtSize(body)
+    }
+
+    def predSize(pred: Pred): Int = pred match {
+      case PTrue | PFalse => 1
+      case PTestFileContains(path, cnts) => 1 + exprSize(path) + exprSize(cnts)
+      case PTestFileState(path, _) => 1 + exprSize(path)
+      case PNot(p) => 1 + predSize(p)
+      case PAnd(p1, p2) => 1 + predSize(p1) + predSize(p2)
+      case POr(p1, p2) => 1 + predSize(p1) + predSize(p2)
+    }
+
+    def exprSize(expr: Expr): Int = expr match {
+      case EId(_) | EPath(_) | EString(_) => 1
+      case EParent(e) => 1 + exprSize(e)
+      case EConcat(l, r) => 1 + exprSize(l) + exprSize(r)
+      case EIf(pred, e1, e2) => 1 + predSize(pred) + exprSize(e1) + exprSize(e2)
+    }
+
+    stmtSize(stmt)
+  }
+      
+
   val rootValue = "__ROOT_1337_H4x0R__"
 
   def stringifyPath(path: Path): String = if (path == Paths.get("/")) {
@@ -128,6 +157,76 @@ private[rehearsal] object PlusHelpers {
     Paths.get("/") 
   } else {
     Paths.get(str)
+  }
+
+  def getLocationMap(manifest: PuppetSyntax.Manifest): Map[String, Int] = {
+    type Result = Map[String, Int]
+    import PuppetSyntax._
+
+    def genManifest(m: Manifest): Result = m match {
+      case MEmpty => Map()
+      case MSeq(s1, s2) => genManifest(s1) ++ genManifest(s2)
+      case MResources(resLst) => resLst.map({ 
+        res => genResource(res)
+      }).reduce(_ ++ _)
+      case MDefine(_, params, body) => params.map(
+        param => param.default.map(genExpr(_))
+      ).flatten.reduce(_ ++ _) ++ genManifest(body)
+      case MClass(_, params, _, body) => params.map(
+        param => param.default.map(genExpr(_))
+      ).flatten.reduce(_ ++ _) ++ genManifest(body)
+      case MSet(_, e) => genExpr(e)
+      case MCase(e, cases) => genExpr(e) ++ cases.map(genCase(_)).reduce(_ ++ _)
+      case MIte(pred, m1, m2) => genExpr(pred) ++ genManifest(m1) ++ genManifest(m2)
+      case MInclude(es) => es.map(genExpr(_)).reduce(_ ++ _)
+      case MRequire(e) => genExpr(e)
+      case MApp(_, args) => args.map(genExpr(_)).reduce(_ ++ _)
+      case MResourceDefault(_, attrs) => attrs.map({
+        case Attribute(e1, e2) => genExpr(e1) ++ genExpr(e2)
+      }).reduce(_ ++ _)
+    }
+
+    def genResource(r: Resource): Result = r match {
+      case ResourceDecl(_, rs) => rs.map({
+        case (e, attrs) => genExpr(e) ++ attrs.map({
+          case Attribute(e1, e2) => genExpr(e1) ++ genExpr(e2)
+        }).reduce(_ ++ _)
+      }).reduce(_ ++ _)
+      case ResourceRef(_, e, attrs) => genExpr(e) ++ attrs.map({
+        case Attribute(e1, e2) => genExpr(e1) ++ genExpr(e2)
+      }).reduce(_ ++ _)
+      case RCollector(_, r) => genRExpr(r)
+    }
+
+    def genExpr(e: Expr): Result = e match {
+      case EUndef | ENum(_) | EVar(_) | EBool(_) | ERegex(_) => Map()
+      case EStr(s) => Map(s -> e.loc())
+      case ENot(e) => genExpr(e)
+      case EAnd(e1, e2) => genExpr(e1) ++ genExpr(e2)
+      case EOr(e1, e2) => genExpr(e1) ++ genExpr(e2)
+      case EEq(e1, e2) => genExpr(e1) ++ genExpr(e2)
+      case ELT(e1, e2) => genExpr(e1) ++ genExpr(e2)
+      case EMatch(e1, e2) => genExpr(e1) ++ genExpr(e2)
+      case EIn(e1, e2) => genExpr(e1) ++ genExpr(e2)
+      case EArray(es) => es.map(genExpr(_)).reduce(_ ++ _)
+      case EApp(_, es) => es.map(genExpr(_)).reduce(_ ++ _)
+      case ECond(test, t, f) => genExpr(test) ++ genExpr(f) ++ genExpr(t)
+      case EResourceRef(_, title) => genExpr(title)
+    }
+
+    def genRExpr(rexpr: RExpr): Result = rexpr match {
+      case REAttrEqual(_, e) => genExpr(e)
+      case REAnd(r1, r2) => genRExpr(r1) ++ genRExpr(r2)
+      case REOr(r1, r2) => genRExpr(r1) ++ genRExpr(r2)
+      case RENot(r) => genRExpr(r)
+    }
+
+    def genCase(c: Case) = c match {
+      case CaseDefault(m) => genManifest(m)
+      case CaseExpr(e, m) => genExpr(e) ++ genManifest(m)
+    }
+
+    genManifest(manifest)
   }
 
   case class StringBiMap private (forward: Map[String, String], inverse: Map[String, String]) {

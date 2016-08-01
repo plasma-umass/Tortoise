@@ -183,9 +183,9 @@ class UpdateSynth(paths: Set[Path], strings: Set[String]) {
         case TPath => pathSort
         case TString => stringSort
       }))
-      if (typ == TPath) {
-        eval(Assert(Not(Equals(hole.id, "NoPath".id))))
-      }
+      //if (typ == TPath) {
+      //  eval(Assert(Not(Equals(hole.id, "NoPath".id))))
+      //}
       holes = holes + (loc -> hole.id)
       hole.id
     }

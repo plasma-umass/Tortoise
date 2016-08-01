@@ -83,7 +83,6 @@ private class FSPlusParser extends RegexParsers with PackratParsers {
     stmtAtom ~ (";" ~> stmt) ^^ { case s1 ~ s2 => seq(s1, s2) } |
     stmtAtom
 
-  //FIXME(rachit): This may be wrong
   lazy val fileState: P[FileState] =
     "file" ^^ { _ => IsFile("")   } |
     "File" ^^ { _ => IsFile("")   } |
