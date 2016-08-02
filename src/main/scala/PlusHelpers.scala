@@ -168,33 +168,34 @@ private[rehearsal] object PlusHelpers {
       case MSeq(s1, s2) => genManifest(s1) ++ genManifest(s2)
       case MResources(resLst) => resLst.map({ 
         res => genResource(res)
-      }).reduce(_ ++ _)
+      }).foldRight[Result](Map())(_ ++ _)
       case MDefine(_, params, body) => params.map(
         param => param.default.map(genExpr(_))
-      ).flatten.reduce(_ ++ _) ++ genManifest(body)
+      ).flatten.foldRight[Result](Map())(_ ++ _) ++ genManifest(body)
       case MClass(_, params, _, body) => params.map(
         param => param.default.map(genExpr(_))
-      ).flatten.reduce(_ ++ _) ++ genManifest(body)
+      ).flatten.foldRight[Result](Map())(_ ++ _) ++ genManifest(body)
       case MSet(_, e) => genExpr(e)
-      case MCase(e, cases) => genExpr(e) ++ cases.map(genCase(_)).reduce(_ ++ _)
+      case MCase(e, cases) => genExpr(e) ++ 
+        cases.map(genCase(_)).foldRight[Result](Map())(_ ++ _)
       case MIte(pred, m1, m2) => genExpr(pred) ++ genManifest(m1) ++ genManifest(m2)
-      case MInclude(es) => es.map(genExpr(_)).reduce(_ ++ _)
+      case MInclude(es) => es.map(genExpr(_)).foldRight[Result](Map())(_ ++ _)
       case MRequire(e) => genExpr(e)
-      case MApp(_, args) => args.map(genExpr(_)).reduce(_ ++ _)
+      case MApp(_, args) => args.map(genExpr(_)).foldRight[Result](Map())(_ ++ _)
       case MResourceDefault(_, attrs) => attrs.map({
         case Attribute(e1, e2) => genExpr(e1) ++ genExpr(e2)
-      }).reduce(_ ++ _)
+      }).foldRight[Result](Map())(_ ++ _)
     }
 
     def genResource(r: Resource): Result = r match {
       case ResourceDecl(_, rs) => rs.map({
         case (e, attrs) => genExpr(e) ++ attrs.map({
           case Attribute(e1, e2) => genExpr(e1) ++ genExpr(e2)
-        }).reduce(_ ++ _)
-      }).reduce(_ ++ _)
+        }).foldRight[Result](Map())(_ ++ _)
+      }).foldRight[Result](Map())(_ ++ _)
       case ResourceRef(_, e, attrs) => genExpr(e) ++ attrs.map({
         case Attribute(e1, e2) => genExpr(e1) ++ genExpr(e2)
-      }).reduce(_ ++ _)
+      }).foldRight[Result](Map())(_ ++ _)
       case RCollector(_, r) => genRExpr(r)
     }
 
@@ -208,8 +209,8 @@ private[rehearsal] object PlusHelpers {
       case ELT(e1, e2) => genExpr(e1) ++ genExpr(e2)
       case EMatch(e1, e2) => genExpr(e1) ++ genExpr(e2)
       case EIn(e1, e2) => genExpr(e1) ++ genExpr(e2)
-      case EArray(es) => es.map(genExpr(_)).reduce(_ ++ _)
-      case EApp(_, es) => es.map(genExpr(_)).reduce(_ ++ _)
+      case EArray(es) => es.map(genExpr(_)).foldRight[Result](Map())(_ ++ _)
+      case EApp(_, es) => es.map(genExpr(_)).foldRight[Result](Map())(_ ++ _)
       case ECond(test, t, f) => genExpr(test) ++ genExpr(f) ++ genExpr(t)
       case EResourceRef(_, title) => genExpr(title)
     }
