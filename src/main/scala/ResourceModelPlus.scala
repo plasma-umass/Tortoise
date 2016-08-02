@@ -150,7 +150,7 @@ object ResourceModelPlus {
     case User(name, present, manageHome) => {
       val (uRoot, gRoot, hRoot, sub) = ("/etc/users", "/etc/groups", "/home", name)
       val (u, g, h) = (EId("userPath"), EId("groupPath"), EId("homePath"))
-      val (ul, gl, hl, sl) = (locMap(uRoot), locMap(gRoot), locMap(hRoot), locMap(sub))
+      val (ul, gl, hl, sl) = (-1, -1, -1, locMap(sub))
 
       SLet("userPath", EConcat(EPath(CPath(JavaPath(uRoot), ul)), EString(CString(sub, sl))),
         SLet("groupPath", EConcat(EPath(CPath(JavaPath(gRoot), gl)), EString(CString(sub, sl))),
@@ -181,7 +181,7 @@ object ResourceModelPlus {
 
     case Group(name, present) => {
       val (root, sub) = ("/etc/groups", name)
-      val (rLoc, sLoc) = (locMap(root), locMap(sub))
+      val (rLoc, sLoc) = (-1, locMap(sub))
 
       SLet("path", EConcat(EPath(CPath(JavaPath(root), rLoc)), EString(CString(sub, sLoc))),
         if (present) {
@@ -242,7 +242,7 @@ object ResourceModelPlus {
       }
 
       val (root, sub) = ("/packages", name)
-      val (rLoc, sLoc) = (locMap(root), locMap(sub))
+      val (rLoc, sLoc) = (-1, locMap(sub))
 
       SLet("path", EConcat(EPath(CPath(JavaPath(root), rLoc)), EString(CString(sub, sLoc))),
         ite(PTestFileState(EId("path"), DoesNotExist),
@@ -297,7 +297,7 @@ object ResourceModelPlus {
 
     case Host(ensure, name, ip, target) => {
       val (root, sub) = (Settings.modelRoot, s"host-$name")
-      val (rLoc, sLoc) = (locMap(root), locMap(name)) 
+      val (rLoc, sLoc) = (-1, locMap(name)) 
       val content = "Managed by Rehearsal."
 
       val s1 = {
