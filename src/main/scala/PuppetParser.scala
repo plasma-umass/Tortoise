@@ -233,6 +233,6 @@ object PuppetParser {
 
   def parseExpr(str: String): Option[Expr] = parseAll(expr, str) match {
     case Success(e, _) => Some(e)
-    case _ => None
+    case msg => println(msg); None
   }
 }

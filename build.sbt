@@ -26,7 +26,9 @@ libraryDependencies ++= Seq(
   "com.assembla.scala-incubator" %% "graph-dot" % "1.9.0",
   "io.spray" %%  "spray-json" % "1.3.2",
   "com.github.scopt" %% "scopt" % "3.3.0",
-  "org.scalaj" %% "scalaj-http" % "1.1.6")
+  "org.scalaj" %% "scalaj-http" % "1.1.6",
+  "org.bitbucket.inkytonik.kiama" %% "kiama" % "2.0.0"
+)
 
 parallelExecution in Test := false
 
