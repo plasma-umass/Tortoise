@@ -37,12 +37,12 @@ private object PuppetPretty extends PrettyPrinter {
       case MSeq(m1, m2) => prettyManifest(m1) <@> prettyManifest(m2)
       case MResources(res) => vsep(res.map(prettyResource(_)))
       case MDefine(n, params, b) => {
-        "define" <+> n <+> parens(commasep(params.map(prettyArg(_)))) <+> 
+        "define" <+> n <+> parens(commasep(params.map(prettyArg(_)))) <+>
         scope(prettyManifest(b))
       }
       case MClass(n, ps, inhs, b) => {
-        "define" <+> n <+> parens(commasep(ps.map(prettyArg(_)))) <+> 
-        optional(inhs)(str => "inherits" <+> str <> space) <> 
+        "define" <+> n <+> parens(commasep(ps.map(prettyArg(_)))) <+>
+        optional(inhs)(str => "inherits" <+> str <> space) <>
         scope(prettyManifest(b))
       }
       case MSet(vn, exp) => vn <+> equal <+> prettyExpr(exp)
@@ -81,7 +81,7 @@ private object PuppetPretty extends PrettyPrinter {
     case EAnd(e1, e2) => {
       val pp = prettyExpr(e1)(EAndContext) <+> "&&" <+> prettyExpr(e2)(EAndContext)
       cnxt match {
-        case ENotContext => parens(pp)   
+        case ENotContext => parens(pp)
         case _ => pp
       }
     }
@@ -100,7 +100,7 @@ private object PuppetPretty extends PrettyPrinter {
     case EApp(n, args) => n <+> parens(vsep(args.map(prettyExpr(_))))
     case ERegex(reg) => reg
     case ECond(test, t, f) => {
-      "if" <+> prettyExpr(test) <+> scope(prettyExpr(t)) <+> 
+      "if" <+> prettyExpr(test) <+> scope(prettyExpr(t)) <+>
       "else" <+> scope(prettyExpr(f))
     }
     case EResourceRef(typ, title) => typ <+> brackets(prettyExpr(title))
@@ -110,15 +110,15 @@ private object PuppetPretty extends PrettyPrinter {
     case REAttrEqual(attr, v) => attr <+> equal <+> prettyExpr(v)
     case RENot(e) => exclamation <+> prettyRExpr(e)(ENotContext)
     case REAnd(e1, e2) => {
-      val pp = prettyRExpr(e1)(EAndContext) <+> "&&" <+> 
+      val pp = prettyRExpr(e1)(EAndContext) <+> "&&" <+>
                prettyRExpr(e2)(EAndContext)
       cnxt match {
-        case ENotContext => parens(pp)   
+        case ENotContext => parens(pp)
         case _ => pp
       }
     }
     case REOr(e1, e2) => {
-      val pp = prettyRExpr(e1)(EOrContext) <+> "||" <+> 
+      val pp = prettyRExpr(e1)(EOrContext) <+> "||" <+>
                prettyRExpr(e2)(EOrContext)
       cnxt match {
         case ENotContext | EAndContext => parens(pp)
@@ -139,7 +139,7 @@ private object PuppetPretty extends PrettyPrinter {
 
   def prettyResource(res: Resource): Doc = {
     implicit val cnxt = ENotContext
-    
+
     def prettyResPair(pair: (Expr, Seq[Attribute])): Doc =
       prettyExpr(pair._1) <> colon <@> vsep(pair._2.map(prettyAttr(_)))
 

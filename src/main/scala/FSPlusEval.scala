@@ -117,7 +117,8 @@ object FSPlusEval {
     case EConcat(lhs, rhs) => (evalExpr(lhs, state, env), evalExpr(rhs, state, env)) match {
       case (CPath(p1, loc), CPath(p2, _)) => CPath(Concat(p1, p2), loc)
       case (CPath(p, loc), CString(str, _)) => CPath(Concat(p, JavaPath(str)), loc)
-      case _ => throw MalformedFSPlusException
+      case (CString(str, _), CPath(p, loc)) => CPath(Concat(JavaPath(str), p), loc)
+      case (CString(s1, loc), CString(s2, _)) => CString(s1 + s2, loc)
     }
     case EIf(p, e1, e2) => if (evalPred(p, state, env)) {
       evalExpr(e1, state, env)

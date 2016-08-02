@@ -5,6 +5,8 @@ import java.nio.file.Paths
 import FSPlusSyntax._
 import Implicits._
 
+case object Unreachable extends RuntimeException("This code branch should be unreachable.")
+
 private[rehearsal] object PlusHelpers {
   def calculateConsts(stmt: Statement): (Set[Path], Set[String]) = {
     type Result = (Set[Path], Set[String])
@@ -25,15 +27,16 @@ private[rehearsal] object PlusHelpers {
     def genExpr(expr: Expr): Result = expr match {
       case EId(_) => (Set(), Set())
       case EPath(CPath(p, _)) => (p.path.ancestors union Set(p.path), Set())
-      case EPath(_) => (Set(), Set())               // Should not trigger
+      case EPath(_) => throw Unreachable
       case EString(CString(s, _)) => (Set(), Set(s))
-      case EString(_) => (Set(), Set())             // Should not trigger
+      case EString(_) => throw Unreachable
       case EParent(e) => genExpr(e)
-      case EConcat(lhs, rhs) => genExpr(lhs) union genExpr(rhs) union (genExpr(lhs)._1.flatMap {
-        p1 => genExpr(rhs)._1.map {
-          p2 => p1 resolve p2
-        }
-      }, Set())
+      case EConcat(lhs, rhs) => {
+        val (lhsRes, rhsRes) = (genExpr(lhs), genExpr(rhs))
+        val concatPaths = for (p1 <- lhsRes._1; p2 <- rhsRes._1) yield (p1 resolve p2)
+        val concatStrings = for (s1 <- lhsRes._2; s2 <- rhsRes._2) yield (s1 + s2)
+        lhsRes union rhsRes union (concatPaths, concatStrings)
+      }
       case EIf(p, e1, e2) => genPred(p) union genExpr(e1) union genExpr(e2)
     }
 

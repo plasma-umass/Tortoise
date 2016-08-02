@@ -13,11 +13,13 @@ import rehearsal.FSPlusTrace.{Type, TPath, TString}
 import rehearsal.{FSPlusSyntax => FSP}
 import rehearsal.{FSPlusTrace => T}
 
+case class SynthTypeError(msg: String) extends RuntimeException(msg)
+
 object UpdateSynth {
   import FSP._
   import Implicits._
 
-  
+
   def synthesize(stmt: Statement, cs: Seq[ValueConstraint]): Option[Substitution] = {
     val (paths, strings) = PlusHelpers.calculateConsts(stmt)
     val pathCs = cs.filter(_.isInstanceOf[PathConstraint]).map(_.asInstanceOf[PathConstraint])
@@ -93,25 +95,37 @@ class UpdateSynth(paths: Set[Path], strings: Set[String]) {
     ))
   }
 
-  // Generate Concat function.
+  // Generate path concatenation function.
   eval(DeclareFun(SSymbol("resolve"), Seq(pathSort, pathSort), pathSort))
-  for (p1 <- paths) {
-    for (p2 <- paths) {
-      if (paths.contains(p1 resolve p2)) {
-        eval(Assert(
-          Equals(
-            FunctionApplication("resolve".id, Seq(
-              PlusHelpers.stringifyPath(p1).id, PlusHelpers.stringifyPath(p2).id
-            )),
-            PlusHelpers.stringifyPath(p1 resolve p2).id
-          )
-        ))
-      }
+  for (p1 <- paths; p2 <- paths) {
+    if (paths.contains(p1 resolve p2)) {
+      eval(Assert(
+        Equals(
+          FunctionApplication("resolve".id, Seq(
+            PlusHelpers.stringifyPath(p1).id, PlusHelpers.stringifyPath(p2).id
+          )),
+          PlusHelpers.stringifyPath(p1 resolve p2).id
+        )
+      ))
+    }
+  }
+
+  // Generate string concatenation function.
+  eval(DeclareFun(SSymbol("merge"), Seq(stringSort, stringSort), stringSort))
+  for (s1 <- strings; s2 <- strings) {
+    if (strings.contains(s1 + s2)) {
+      eval(Assert(
+        Equals(
+          FunctionApplication("merge".id, Seq(strMap.rep(s1).id, strMap.rep(s2).id)),
+          strMap.rep(s1 + s2).id
+        )
+      ))
     }
   }
 
   // Generate initial state function (state1?)
   eval(DeclareFun(SSymbol("state1?"), Seq(pathSort), stateSort))
+
   eval(Assert(Equals(FunctionApplication("state1?".id, Seq("NoPath".id)), "Null".id)))
   for (path <- paths) {
     eval(Assert(
@@ -452,13 +466,27 @@ class UpdateSynth(paths: Set[Path], strings: Set[String]) {
     case DoesNotExist => "Null".id
   }
 
-  def convertExpr(expr: T.Expr)(implicit n: Int): Term = expr match {
-    case T.EHole(typ, loc) => mkHole(loc, typ)
-    case T.EParent(e) => FunctionApplication("parent".id, Seq(convertExpr(e)))
-    case T.EConcat(lhs, rhs) => FunctionApplication(
-      "resolve".id, Seq(convertExpr(lhs), convertExpr(rhs))
-    )
-    case T.EIf(p, e1, e2) => ITE(convertPred(p), convertExpr(e1), convertExpr(e2))
+  def convertExpr(expr: T.Expr)(implicit n: Int): Term = {
+
+    def convert(expr: T.Expr): (Term, T.Type) = expr match {
+      case T.EHole(typ, loc) => (mkHole(loc, typ), typ)
+      case T.EParent(e) => (FunctionApplication("parent".id, Seq(convert(e)._1)), T.TPath)
+      case T.EConcat(lhs, rhs) => (convert(lhs), convert(rhs)) match {
+        case ((lhs, T.TPath), (rhs, T.TPath)) => (FunctionApplication(
+          "resolve".id, Seq(lhs, rhs)
+        ), T.TPath)
+        case ((lhs, T.TString), (rhs, T.TString)) => (FunctionApplication(
+          "merge".id, Seq(lhs, rhs)
+        ), T.TString)
+        case ((_, t1), (_, t2)) => throw SynthTypeError(s"Type mismatch: $t1, $t2")
+      }
+      case T.EIf(p, e1, e2) => (convert(e1), convert(e2)) match {
+        case ((et1, t1), (et2, t2)) if t1 == t2 => (ITE(convertPred(p), et1, et2), t1)
+        case ((_, t1), (_, t2)) => throw SynthTypeError(s"Type mismatch: $t1, $t2")
+      }
+    }
+
+    convert(expr)._1
   }
 
   def parseModel(exprs: List[SExpr]): Substitution = {

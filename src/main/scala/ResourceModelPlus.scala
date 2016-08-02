@@ -27,7 +27,7 @@ object ResourceModelPlus {
     val path = s"/etc/init.d/$name"
   }
   case class Cron(
-    present: Boolean, command: String, user: String, hour: String, minute: String, month: String, 
+    present: Boolean, command: String, user: String, hour: String, minute: String, month: String,
     monthday: String
   ) extends Res
   case class Host(ensure: Boolean, name: String, ip: String, target: String) extends Res
@@ -59,7 +59,7 @@ object ResourceModelPlus {
 
     case EnsureFile(p, CInline(c)) => {
       SLet("path", EPath(CPath(JavaPath(p), locMap(p))),
-        ite(PTestFileState(EId("path"), IsFile("")), rm(EId("path")), SSkip) >> 
+        ite(PTestFileState(EId("path"), IsFile("")), rm(EId("path")), SSkip) >>
         mkfile(EId("path"), EString(CString(c, locMap(c))))
       )
     }
@@ -67,7 +67,7 @@ object ResourceModelPlus {
     case EnsureFile(p, CFile(s)) => {
       SLet("path", EPath(CPath(JavaPath(p), locMap(p))),
         SLet("srcPath", EPath(CPath(JavaPath(Paths.get(s)), locMap(s))),
-          ite(PTestFileState(EId("path"), IsFile("")), rm(EId("path")), SSkip) >> 
+          ite(PTestFileState(EId("path"), IsFile("")), rm(EId("path")), SSkip) >>
           cp(EId("srcPath"), EId("path"))
         )
       )
@@ -277,10 +277,17 @@ object ResourceModelPlus {
 
     case Cron(present, cmd, user, hour, minute, month, monthday) => {
       val name = cmd.hashCode.toString + "-" + cmd.toLowerCase.filter(c => c >= 'a' && c <= 'z')
-      val (root, sub) = (Settings.modelRoot, s"crontab-$name")
+      val root = Settings.modelRoot
       val content = "arbitrary content"
 
-      SLet("path", EConcat(EPath(CPath(JavaPath(root), -1)), EString(CString(sub, locMap(name)))),
+      val pathProg = EConcat(
+        EPath(CPath(JavaPath(root), -1)),
+        EConcat(
+          EString(CString("crontab-", -1)),
+          EString(CString(name, locMap(name)))
+        )
+      )
+      SLet("path", pathProg,
         if (present) {
           ite(PTestFileState(EId("path"), DoesNotExist),
             mkfile(EId("path"), EString(CString(content, locMap(content)))),
@@ -296,8 +303,7 @@ object ResourceModelPlus {
     }
 
     case Host(ensure, name, ip, target) => {
-      val (root, sub) = (Settings.modelRoot, s"host-$name")
-      val (rLoc, sLoc) = (-1, locMap(name)) 
+      val root = Settings.modelRoot
       val content = "Managed by Rehearsal."
 
       val s1 = {
@@ -319,7 +325,15 @@ object ResourceModelPlus {
         )
       }
 
-      SLet("path", EConcat(EPath(CPath(JavaPath(root), rLoc)), EString(CString(sub, sLoc))),
+      val pathProg = EConcat(
+        EPath(CPath(JavaPath(root), -1)),
+        EConcat(
+          EString(CString("host-", -1)),
+          EString(CString(name, locMap(name)))
+        )
+      )
+
+      SLet("path", pathProg,
         SLet("target", EPath(CPath(JavaPath(target), locMap(target))),
           s1 >> s2
         )
