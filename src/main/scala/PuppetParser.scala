@@ -15,6 +15,21 @@ private class PuppetParser extends RegexParsers with PackratParsers {
     loc
   }
 
+  def interpolateString(str: String): Expr = {
+    // Split strings into individual components, separating out variables in order.
+    val regex = """(\$\{[^}]*\})|([^$]*)""".r
+    val terms = regex.findAllMatchIn(str).map(_.matched).filter(_.nonEmpty).map {
+      case s if s.startsWith("$") => EVar(s.substring(2, s.length - 1))
+      case s => EStr(s).setLoc(freshLoc())
+    }.toSeq
+
+    // Return a simple EStr or EVar if interpolation is not actually taking place here.
+    terms match {
+      case Seq(term) => term
+      case _ => EStrInterp(terms)
+    }
+  }
+
   var holes: Map[(String, String), Int] = Map()
   def locForRes(typ: String, title: Expr): Option[Int] = title match {
     case EStr(title) => holes.get(typ -> title) match {
@@ -119,7 +134,7 @@ private class PuppetParser extends RegexParsers with PackratParsers {
   }
 
   //Attribute
-  lazy val attrId: P[EStr] = id ^^ { case s => EStr(s).setLoc(freshLoc()) }
+  lazy val attrId: P[Expr] = id ^^ (interpolateString(_))
   lazy val attribute: P[Attribute] =
     (attrId | vari) ~ ("=>" ~> (expr | attrId)) ^^ { case name ~ value => Attribute(name, value) }
 
@@ -139,7 +154,7 @@ private class PuppetParser extends RegexParsers with PackratParsers {
     "true" ^^ { _ => EBool(true) } |
     "false" ^^ { _ => EBool(false) } |
     vari |
-    stringVal ^^ { x => EStr(x).setLoc(freshLoc()) } |
+    stringVal ^^ (interpolateString(_)) |
     """\d+""".r ^^
       { n => ENum(n.toInt) } |
     "[" ~> repsep(expr, ",") <~ (opt(",") ~ "]") ^^ { case es => EArray(es) } |
@@ -192,7 +207,7 @@ private class PuppetParser extends RegexParsers with PackratParsers {
     "undef" ^^ { _ => EUndef } |
     "true" ^^ { _ => EBool(true) } |
     "false" ^^ { _ => EBool(false) } |
-    stringVal ^^ { x => EStr(x).setLoc(freshLoc()) } |
+    stringVal ^^ (interpolateString(_)) |
     """\d+""".r ^^  { n => ENum(n.toInt) } |
     word ~ ("[" ~> expr <~ "]") ^^ { case typ ~ title => EResourceRef(typ, title.setLoc(locForRes(typ, title))) }
   }

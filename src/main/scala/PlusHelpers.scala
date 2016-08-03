@@ -51,7 +51,7 @@ private[rehearsal] object PlusHelpers {
       case SRm(path) => genExpr(path)
       case SCp(src, dst) => genExpr(src) union genExpr(dst)
     }
-    
+
     genStmt(stmt)
   }
 
@@ -146,7 +146,7 @@ private[rehearsal] object PlusHelpers {
 
     stmtSize(stmt)
   }
-      
+
 
   val rootValue = "__ROOT_1337_H4x0R__"
 
@@ -157,7 +157,7 @@ private[rehearsal] object PlusHelpers {
   }
 
   def destringifyPath(str: String): Path = if (str == rootValue) {
-    Paths.get("/") 
+    Paths.get("/")
   } else {
     Paths.get(str)
   }
@@ -169,7 +169,7 @@ private[rehearsal] object PlusHelpers {
     def genManifest(m: Manifest): Result = m match {
       case MEmpty => Map()
       case MSeq(s1, s2) => genManifest(s1) ++ genManifest(s2)
-      case MResources(resLst) => resLst.map({ 
+      case MResources(resLst) => resLst.map({
         res => genResource(res)
       }).foldRight[Result](Map())(_ ++ _)
       case MDefine(_, params, body) => params.map(
@@ -179,7 +179,7 @@ private[rehearsal] object PlusHelpers {
         param => param.default.map(genExpr(_))
       ).flatten.foldRight[Result](Map())(_ ++ _) ++ genManifest(body)
       case MSet(_, e) => genExpr(e)
-      case MCase(e, cases) => genExpr(e) ++ 
+      case MCase(e, cases) => genExpr(e) ++
         cases.map(genCase(_)).foldRight[Result](Map())(_ ++ _)
       case MIte(pred, m1, m2) => genExpr(pred) ++ genManifest(m1) ++ genManifest(m2)
       case MInclude(es) => es.map(genExpr(_)).foldRight[Result](Map())(_ ++ _)
@@ -205,6 +205,7 @@ private[rehearsal] object PlusHelpers {
     def genExpr(e: Expr): Result = e match {
       case EUndef | ENum(_) | EVar(_) | EBool(_) | ERegex(_) => Map()
       case EStr(s) => Map(s -> e.loc())
+      case EStrInterp(terms) => terms.map(genExpr(_)).foldRight[Result](Map())(_ ++ _)
       case ENot(e) => genExpr(e)
       case EAnd(e1, e2) => genExpr(e1) ++ genExpr(e2)
       case EOr(e1, e2) => genExpr(e1) ++ genExpr(e2)
@@ -236,7 +237,7 @@ private[rehearsal] object PlusHelpers {
   case class StringBiMap private (forward: Map[String, String], inverse: Map[String, String]) {
     def rep(left: String): String = forward(left)
     def original(right: String): String = inverse(right)
-    
+
     def getRep(left: String): Option[String] = forward.get(left)
     def getOriginal(right: String): Option[String] = inverse.get(right)
 

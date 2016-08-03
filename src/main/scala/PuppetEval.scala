@@ -8,46 +8,6 @@ private object PuppetEval {
   import edu.umass.cs.extras.Implicits._
   import Implicits._
 
-  object StringInterpolator {
-
-    def interpolate(eval: Expr => Expr, str: String): Expr = {
-      val strs = str.split("""\$""")
-      EStr(strs(0) + strs.toList.drop(1).map(helper(eval)).mkString(""))
-    }
-
-    def helper(eval: Expr => Expr)(str: String): String = {
-      val tokens = str.split("""\s+""").toList
-      checkBraces(eval, tokens(0)) + tokens.drop(1).mkString("")
-    }
-
-    def checkBraces(eval: Expr => Expr, str: String): String = {
-      str.indexOf("{") match {
-        case 0 => {
-          val ix = str.indexOf("}")
-          val expr = str.substring(1, ix)
-          val rest = str.substring(ix+1, str.length)
-          evaluate(eval, expr) + rest
-        }
-        case _ => evaluate(eval, str)
-      }
-    }
-
-    // TODO(arjun): We should really parse in the parser
-    def evaluate(eval: Expr => Expr, str: String): String = {
-      val strPrime = if(str.charAt(0) != '$') "$" + str else str
-      PuppetParser.parseExpr(strPrime) match {
-        case Some(expr) => eval(expr) match {
-          case EStr(s) => s
-          case _ => throw EvalError(
-            s"None string expression evaluated during string interpolation: $expr"
-          )
-        }
-        case m => throw EvalError(s"Could not parse interpolated expression: $m")
-      }
-    }
-
-  }
-
   def assignedVars(manifest: Manifest): Set[String] = manifest match {
     case MEmpty => Set.empty
     case MSeq(m1, m2) => assignedVars(m1) union assignedVars(m2)
@@ -241,11 +201,8 @@ private object PuppetEval {
     }
 
     def evalExpr(store: Store, expr: Expr): Expr = expr match {
-      case EUndef => EUndef
-      case ENum(n) => ENum(n)
-      case EStr(str) => StringInterpolator.interpolate(e => evalExpr(store, e), str)
-      case EBool(b) => EBool(b)
-      case ERegex(r) => ERegex(r)
+      case EUndef | ENum(_) | EStr(_) | EBool(_) | ERegex(_) => expr
+      case EStrInterp(terms) => EStrInterp(terms.map(e => evalExpr(store, e)))
       case EResourceRef(typ, title) => EResourceRef(typ.toLowerCase, evalExpr(store, title))
       case EEq(e1, e2) => EBool(evalExpr(store, e1) == evalExpr(store, e2))
       case ELT(e1, e2) => (evalExpr(store, e1), evalExpr(store, e2)) match {
@@ -289,7 +246,6 @@ private object PuppetEval {
         }
         case _ => throw EvalError(s"expected match to find a string on the LHS and a regex on the RHS")
       }
-      case _ => ???
     }
 
     def resourceRefs(e: Expr): Seq[Datalog.Term] = e match {

@@ -49,7 +49,7 @@ object PuppetSyntax extends com.typesafe.scalalogging.LazyLogging {
     }
 
    def locMap(): Map[String, Int] = PlusHelpers.getLocationMap(this)
-  
+
    def eval(): EvaluatedManifest = PuppetEval.eval(this)
   }
 
@@ -92,6 +92,7 @@ object PuppetSyntax extends com.typesafe.scalalogging.LazyLogging {
     override def setLoc(loc: Int): EStr = super.setLoc(loc).asInstanceOf[EStr]
     override def setLoc(loc: Option[Int]): EStr = super.setLoc(loc).asInstanceOf[EStr]
   }
+  case class EStrInterp(terms: Seq[Expr]) extends Expr
   case class ENum(n: Int) extends Expr
   case class EVar(name: String) extends Expr
   case class EBool(b: Boolean) extends Expr

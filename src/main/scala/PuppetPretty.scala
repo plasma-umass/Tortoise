@@ -74,6 +74,11 @@ private object PuppetPretty extends PrettyPrinter {
       case EKeywordContext => s
       case _ => dquotes(s)
     }
+    case EStrInterp(terms) => dquotes(fillcat(terms.map {
+      case EVar(id) => dollar <> braces(id)
+      case EStr(s) => text(s)
+      case term => text(s"Malformed interpolation term: $term")
+    }))
     case ENum(n) => n.toString
     case EBool(b) => b.toString
     case EVar(v) => dollar <> v
