@@ -3,6 +3,8 @@ package rehearsal
 import PrettyFSPlus._
 import Implicits.RichPath
 
+case class FileNotFoundException(msg: String) extends RuntimeException(msg)
+
 object FSPlusSyntax {
   type Substitution = Map[Int, Const]
 
@@ -34,10 +36,24 @@ object FSPlusSyntax {
   }
 
   sealed trait FileState
-
   case class IsFile(str: String) extends FileState
   case object IsDir extends FileState
   case object DoesNotExist extends FileState
+
+  case class FileSystem(paths: Map[Path, FileState]) {
+    def -(other: FileSystem): Seq[ValueConstraint] = {
+      val filtered = other.paths.toSeq.filter { case (path, state) =>
+          val oldSt = paths.getOrElse(path, throw FileNotFoundException(s"path $path is missing."))
+          oldSt != state
+      }
+
+      filtered.flatMap { case (path, state) => state match {
+          case IsFile(str) => Seq(PathConstraint(path, state), StringConstraint(path, str))
+          case _ => Seq(PathConstraint(path, state))
+          }
+        }
+    }
+  }
 
   sealed trait Pred {
     def pretty: String = prettyPred(this)
