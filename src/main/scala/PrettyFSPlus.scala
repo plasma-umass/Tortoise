@@ -19,6 +19,9 @@ private object FSPlusPretty extends PrettyPrinter {
   def prettyStmt(stmt: Statement): Doc = stmt match {
     case SError => "error"
     case SSkip => "skip"
+    case SLet(id, e, b@SLet(_, _, _)) => {
+      "let" <+> id <+> equal <+> prettyExpr(e) <@> "in" <+> prettyStmt(b)
+    }
     case SLet(id, e, b) => {
       "let" <+> id <+> equal <+> prettyExpr(e) <@> "in" <+> indent(prettyStmt(b))
     }
