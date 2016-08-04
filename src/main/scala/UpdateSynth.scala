@@ -38,10 +38,7 @@ object UpdateSynth {
     val allPaths: Set[Path] = basePaths.flatMap { path =>
         val conts = path.iterator.toList
         (1 until conts.size).flatMap{ i =>
-          val lst = conts.toList.sliding(i).toList
-          val mlst = lst.map(_.reduce { _ concat  _})
-          println(s"for $path: $mlst")
-          mlst
+          conts.toList.sliding(i).toList.map(_.reduce { _ concat  _})
         } ++ basePaths
     }
 
@@ -81,8 +78,9 @@ class UpdateSynth(paths: Set[Path], strings: Set[String]) {
   // Generate String datatype
   val stringSort = Sort(SimpleIdentifier(SSymbol("String")))
   val stringCtrs = strings.toSeq.map(s => Constructor(SSymbol(strMap.rep(s)), Seq()))
+  val noStringCtr = Constructor(SSymbol("NoString"), Seq())
   eval(DeclareDatatypes(Seq(
-    SSymbol("String") -> stringCtrs
+    SSymbol("String") -> (noStringCtr +: stringCtrs)
   )))
 
   // Declare State datatype.
@@ -147,6 +145,13 @@ class UpdateSynth(paths: Set[Path], strings: Set[String]) {
         Equals(
           FunctionApplication(concatStrings, Seq(strMap.rep(s1).id, strMap.rep(s2).id)),
           strMap.rep(s1 + s2).id
+        )
+      ))
+    } else {
+      eval(Assert(
+        Equals(
+          FunctionApplication(concatStrings, Seq(strMap.rep(s1).id, strMap.rep(s2).id)),
+          "NoString".id
         )
       ))
     }
