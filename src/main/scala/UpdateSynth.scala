@@ -13,6 +13,7 @@ import rehearsal.FSPlusTrace.{Type, TPath, TString}
 import rehearsal.{FSPlusSyntax => FSP}
 import rehearsal.{FSPlusTrace => T}
 import Implicits.RichPath
+import scala.collection.JavaConversions._
 
 case class SynthTypeError(msg: String) extends RuntimeException(msg)
 
@@ -22,6 +23,7 @@ object UpdateSynth {
 
 
   def synthesize(stmt: Statement, cs: Seq[ValueConstraint]): Option[Substitution] = {
+
     val (paths, strings) = PlusHelpers.calculateConsts(stmt)
     val pathCs = cs.filter(_.isInstanceOf[PathConstraint]).map(_.asInstanceOf[PathConstraint])
     val stringCs = cs.filter(_.isInstanceOf[StringConstraint]).map(_.asInstanceOf[StringConstraint])
@@ -29,8 +31,19 @@ object UpdateSynth {
       pathCs.flatMap(c => Seq(c.path) ++ c.path.ancestors).toSet ++
       stringCs.flatMap(c => Seq(c.path) ++ c.path.ancestors).toSet
     }
-    val allPaths = constraintPaths ++ paths
+
+    val basePaths = constraintPaths ++ paths
     val allStrings = stringCs.map(_.contents).toSet ++ Set("") ++ strings
+
+    val allPaths: Set[Path] = basePaths.flatMap { path =>
+        val conts = path.iterator.toList
+        (1 until conts.size).flatMap{ i =>
+          val lst = conts.toList.sliding(i).toList
+          val mlst = lst.map(_.reduce { _ concat  _})
+          println(s"for $path: $mlst")
+          mlst
+        } ++ basePaths
+    }
 
     // Calculate soft constraints
     val softVals = PlusHelpers.generateSoftValueConstraints(stmt, paths)
