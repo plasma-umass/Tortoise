@@ -129,7 +129,7 @@ object Implicits {
     def ->(st: FSPlusSyntax.FileState) = FSPlusSyntax.PathConstraint(path, st)
     def ->(string: String) = FSPlusSyntax.StringConstraint(path, string)
 
-    def concat(other: Path) = java.nio.file.Paths.get(path.toString + other.toString)
+    def concat(other: Path) = java.nio.file.Paths.get(path.toString + "/" + other.toString)
   }
 
   implicit class RichLoc(loc: Int) {

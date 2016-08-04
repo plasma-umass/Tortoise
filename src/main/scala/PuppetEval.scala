@@ -1,6 +1,6 @@
 package rehearsal
 
-private object PuppetEval {
+private[rehearsal] object PuppetEval {
 
   import PuppetSyntax._
   import scalax.collection.Graph
@@ -81,6 +81,89 @@ private object PuppetEval {
 
   case class AResource(typ: String, title: String)
 
+
+  def evalTitle(store: Store, titleExpr: Expr): String = {
+    evalExpr(store, titleExpr) match {
+      case EStr(title) => title
+      case v => throw EvalError(s"title should be a string, but got $v ${titleExpr.pos}")
+    }
+  }
+
+  def evalTitles(store: Store, titleExpr: Expr): Seq[String] = {
+    evalExpr(store, titleExpr) match {
+      case EStr(title) => Seq(title)
+      // Re-evaling is unnecessary, but harmless
+      case EArray(titles) => titles.map(x => evalTitle(store, x))
+      case v => throw EvalError(s"title should be a string or an array, but got $v{titleExpr.pos}")
+    }
+  }
+
+  // Helps implement conditionals. "Truthy" values are mapped to Scala's true
+  // and "falsy" values are mapped to Scala's false.
+  def evalBool(store: Store, expr: Expr): Boolean = evalExpr(store, expr) match {
+    case EBool(true) => true
+    case EBool(false) => false
+    case EStr(_) => true
+    case EUndef => false
+    case v => throw EvalError(s"predicate evaluated to $v")
+  }
+
+  // A hack to implement the defined predicate
+  val definedResources = scala.collection.mutable.Set[Node]()
+
+  def evalExpr(store: Store, expr: Expr): Expr = expr match {
+    case EUndef | ENum(_) | EStr(_) | EBool(_) | ERegex(_) => expr
+    case EStrInterp(terms) => EStr(
+      terms.map(e => evalExpr(store, e)).map {
+        case EStr(s) => s
+        case term => throw EvalError(s"Found unexpected term in string interpolation: $term")
+      }.foldRight("")(_ + _)
+    )
+    case EResourceRef(typ, title) => EResourceRef(typ.toLowerCase, evalExpr(store, title))
+    case EEq(e1, e2) => EBool(evalExpr(store, e1) == evalExpr(store, e2))
+    case ELT(e1, e2) => (evalExpr(store, e1), evalExpr(store, e2)) match {
+      case (ENum(n1), ENum(n2)) => EBool(n1 < n2)
+      case _ => throw EvalError(s"expected args to LT to evaluate to Nums")
+    }
+
+    case ENot(e) => EBool(!evalBool(store, e))
+    case EAnd(e1, e2) => EBool(evalBool(store, e1) && evalBool(store, e2))
+    case EOr(e1, e2) => EBool(evalBool(store, e1) || evalBool(store, e2))
+    case EVar(x) => store.get(x) match {
+        // TODO(arjun): strictly speaking, should produce undefined, but this
+        // helps catch bugs
+      case None => throw EvalError(s"variable $x is undefined")
+      case Some(v) => v.value
+    }
+    case EArray(es) => EArray(es.map(e => evalExpr(store, e)))
+    case EApp("template", Seq(e)) => evalExpr(store, e) match {
+      // TODO(arjun): This is bogus. It is supposed to use filename as a
+      // template string. The file contents have patterns that refer to variables
+      // in the environment.
+      case EStr(filename) => EStr(filename)
+      case _ => throw EvalError("template function expects a string argument")
+    }
+    case EApp("defined", Seq(rref)) => evalExpr(store, rref) match {
+      case EResourceRef(typ, EStr(title)) => EBool(definedResources.contains(Node(typ, title)))
+      case v => throw EvalError(s"expected resource reference as argument to defined")
+    }
+    case EApp(f, args) => ???
+    case ECond(e1, e2, e3) => evalBool(store, e1) match {
+      case true => evalExpr(store, e2)
+      case false => evalExpr(store, e3)
+    }
+    case EMatch(e1, e2) => (evalExpr(store, e1), evalExpr(store, e2)) match {
+      case (EStr(s), ERegex(r)) => {
+        val pat = r.r
+        s match {
+          case pat(_) => EBool(true)
+          case _ => EBool(false)
+        }
+      }
+      case _ => throw EvalError(s"expected match to find a string on the LHS and a regex on the RHS")
+    }
+  }
+
   private class PuppetEval {
     val types = scala.collection.mutable.Map[String, AType]()
 
@@ -89,9 +172,6 @@ private object PuppetEval {
     val datalog = new Datalog.Evaluator()
 
     val nodeSets: Iterator[Datalog.Term] = Stream.from(0).map(n => Datalog.Lit(s"set$n")).iterator
-
-    // A hack to implement the defined predicate
-    val definedResources = scala.collection.mutable.Set[Node]()
 
     import Datalog._
 
@@ -173,80 +253,6 @@ private object PuppetEval {
         titleFact(Var("User"), Var("X"))))
 
     var newInstances = scala.collection.mutable.Stack[AInstance]()
-
-    def evalTitle(store: Store, titleExpr: Expr): String = {
-      evalExpr(store, titleExpr) match {
-        case EStr(title) => title
-        case v => throw EvalError(s"title should be a string, but got $v ${titleExpr.pos}")
-      }
-    }
-
-    def evalTitles(store: Store, titleExpr: Expr): Seq[String] = {
-      evalExpr(store, titleExpr) match {
-        case EStr(title) => Seq(title)
-        // Re-evaling is unnecessary, but harmless
-        case EArray(titles) => titles.map(x => evalTitle(store, x))
-        case v => throw EvalError(s"title should be a string or an array, but got $v{titleExpr.pos}")
-      }
-    }
-
-    // Helps implement conditionals. "Truthy" values are mapped to Scala's true
-    // and "falsy" values are mapped to Scala's false.
-    def evalBool(store: Store, expr: Expr): Boolean = evalExpr(store, expr) match {
-      case EBool(true) => true
-      case EBool(false) => false
-      case EStr(_) => true
-      case EUndef => false
-      case v => throw EvalError(s"predicate evaluated to $v")
-    }
-
-    def evalExpr(store: Store, expr: Expr): Expr = expr match {
-      case EUndef | ENum(_) | EStr(_) | EBool(_) | ERegex(_) => expr
-      case EStrInterp(terms) => EStrInterp(terms.map(e => evalExpr(store, e)))
-      case EResourceRef(typ, title) => EResourceRef(typ.toLowerCase, evalExpr(store, title))
-      case EEq(e1, e2) => EBool(evalExpr(store, e1) == evalExpr(store, e2))
-      case ELT(e1, e2) => (evalExpr(store, e1), evalExpr(store, e2)) match {
-        case (ENum(n1), ENum(n2)) => EBool(n1 < n2)
-        case _ => throw EvalError(s"expected args to LT to evaluate to Nums")
-      }
-
-      case ENot(e) => EBool(!evalBool(store, e))
-      case EAnd(e1, e2) => EBool(evalBool(store, e1) && evalBool(store, e2))
-      case EOr(e1, e2) => EBool(evalBool(store, e1) || evalBool(store, e2))
-      case EVar(x) => store.get(x) match {
-          // TODO(arjun): strictly speaking, should produce undefined, but this
-          // helps catch bugs
-        case None => throw EvalError(s"variable $x is undefined")
-        case Some(v) => v.value
-      }
-      case EArray(es) => EArray(es.map(e => evalExpr(store, e)))
-      case EApp("template", Seq(e)) => evalExpr(store, e) match {
-        // TODO(arjun): This is bogus. It is supposed to use filename as a
-        // template string. The file contents have patterns that refer to variables
-        // in the environment.
-        case EStr(filename) => EStr(filename)
-        case _ => throw EvalError("template function expects a string argument")
-      }
-      case EApp("defined", Seq(rref)) => evalExpr(store, rref) match {
-        case EResourceRef(typ, EStr(title)) => EBool(definedResources.contains(Node(typ, title)))
-        case v => throw EvalError(s"expected resource reference as argument to defined")
-      }
-      case EApp(f, args) => ???
-      case ECond(e1, e2, e3) => evalBool(store, e1) match {
-        case true => evalExpr(store, e2)
-        case false => evalExpr(store, e3)
-      }
-      case EMatch(e1, e2) => (evalExpr(store, e1), evalExpr(store, e2)) match {
-        case (EStr(s), ERegex(r)) => {
-          val pat = r.r
-          s match {
-            case pat(_) => EBool(true)
-            case _ => EBool(false)
-          }
-        }
-        case _ => throw EvalError(s"expected match to find a string on the LHS and a regex on the RHS")
-      }
-    }
 
     def resourceRefs(e: Expr): Seq[Datalog.Term] = e match {
       case EResourceRef(typ, EStr(title)) => Seq(resourceToTerm(Node(typ, title)))
@@ -469,13 +475,14 @@ private object PuppetEval {
       case CaseExpr(e, _) => evalExpr(store, e) == value
     }
 
-    def eval(manifest: Manifest): Unit = {
+    def eval(manifest: Manifest): Store = {
       val instances = Stream.from(0).toIterator
       val instanceToTerm = new Datalog.ToTerm[Int]("instance")
       val topLevel = instanceToTerm(instances.next)
       val topStore = assignedVars(manifest).map(x => (x, new Ref(x))).toMap
 
       evalManifest(topStore, topLevel, manifest)
+      var resStore = topStore
       while (newInstances.isEmpty == false) {
         val AInstance(typ, title, actuals, instance) = newInstances.pop()
         val AType(isClass, enclosingStore, defaults, formals, body) =
@@ -502,7 +509,10 @@ private object PuppetEval {
              local => new Ref(local, None))
         }
         evalManifest(store, instance, body)
+        resStore = store
       }
+      // FIXME(awe): We might actually want to just use topStore here?
+      resStore
     }
   }
 
@@ -510,7 +520,7 @@ private object PuppetEval {
     import Datalog._
     val evaluator = new PuppetEval
     import evaluator._
-    evaluator.eval(manifest)
+    val store = evaluator.eval(manifest)
 
 
     datalog.query(Fact("resource", List(Var("X"))))
@@ -550,7 +560,7 @@ private object PuppetEval {
     if (g.isAcyclic == false) {
       throw EvalError("dependency cycle found")
     }
-    EvaluatedManifest(resources, g, manifest.locMap)
+    EvaluatedManifest(resources, g, manifest.locMap, manifest.interpMap(store))
   }
 
 }

@@ -36,7 +36,7 @@ object SubstitutionPlus {
     case CPath(path, loc) if subst.contains(loc) => subst(loc)
     case CString(str, loc) if subst.contains(loc) => subst(loc)
     case CPath(_, _) | CString(_, _) => const
-  }  
+  }
 }
 
 object SubstitutionPuppet {
@@ -108,6 +108,7 @@ object SubstitutionPuppet {
     case EUndef | ENum(_) | EVar(_) | EBool(_) => e
     case EStr(_) if subst.contains(e.loc) => EStr(subst(e.loc))
     case EStr(_) => e
+    case EStrInterp(terms) => EStrInterp(terms.map(applySubstExpr(_)))
     case ENot(e) => ENot(applySubstExpr(e))
     case EAnd(e1, e2) => EAnd(applySubstExpr(e1), applySubstExpr(e2))
     case EOr(e1, e2) => EOr(applySubstExpr(e1), applySubstExpr(e2))

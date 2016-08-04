@@ -48,9 +48,13 @@ object PuppetSyntax extends com.typesafe.scalalogging.LazyLogging {
       case _ => MSeq(this, other)
     }
 
-   def locMap(): Map[String, Int] = PlusHelpers.getLocationMap(this)
+    def locMap(): Map[String, Int] = PlusHelpers.getLocationMap(this)
 
-   def eval(): EvaluatedManifest = PuppetEval.eval(this)
+    def interpMap(store: PuppetEval.Store): Map[String, Seq[String]] = {
+      PlusHelpers.getStrInterpMap(this, store)
+    }
+
+    def eval(): EvaluatedManifest = PuppetEval.eval(this)
   }
 
   case object MEmpty extends Manifest
@@ -118,10 +122,12 @@ object PuppetSyntax extends com.typesafe.scalalogging.LazyLogging {
   // Our representation of fully evaluataed manifests, where nodes are primitive resources.
   case class EvaluatedManifest(
     ress: Map[FSPlusGraph.Key, ResourceVal], deps: Graph[FSPlusGraph.Key, DiEdge],
-    locMap: Map[String, Int]
+    locMap: Map[String, Int], interpMap: Map[String, Seq[String]]
   ) {
     def resourceGraph(): ResourceGraph = {
-      ResourceGraph(ress.mapValues(x => ResourceSemantics.compile(x)).view.force, deps, locMap)
+      ResourceGraph(
+        ress.mapValues(x => ResourceSemantics.compile(x)).view.force, deps, locMap, interpMap
+      )
     }
   }
 
@@ -138,11 +144,11 @@ object PuppetSyntax extends com.typesafe.scalalogging.LazyLogging {
 
   case class ResourceGraph(
     ress: Map[FSPlusGraph.Key, ResourceModelPlus.Res], deps: Graph[FSPlusGraph.Key, DiEdge],
-    locMap: Map[String, Int]
+    locMap: Map[String, Int], interpMap: Map[String, Seq[String]]
   ) {
 
     def fsGraph(distro: String): FSPlusGraph = {
-      FSPlusGraph(ress.mapValues(_.compile(locMap, distro)).view.force, deps)
+      FSPlusGraph(ress.mapValues(_.compile(locMap, interpMap, distro)).view.force, deps)
     }
   }
 

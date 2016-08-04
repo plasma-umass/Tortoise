@@ -24,12 +24,12 @@ object Main extends App {
   def puppetSynthesizer(config: Config): Unit = {
     val fileName = config.string("filename")
     val constraints = FSPlusParser.parseConstraints(config.string("constraints"))
-    
+
     Try({
       import SubstitutionPuppet._
 
       val manifest = PuppetParser.parseFile(fileName)
-      val prog = manifest.eval.resourceGraph.fsGraph("ubuntu").statement
+      val prog = manifest.eval.resourceGraph.fsGraph("ubuntu-trusty").statement
       val optSubst = UpdateSynth.synthesize(prog, constraints)
       optSubst.map(subst => applySubst(manifest)(convertSubst(subst)))
     }) match {
@@ -53,7 +53,7 @@ object Main extends App {
         println(msg)
       }
       case Failure(exn) => throw exn
-    } 
+    }
   }
 
   def synthesizer(config: Config): Unit = {
