@@ -6,16 +6,19 @@ import FSPlusSyntax._
 import Implicits._
 
 case object Unreachable extends RuntimeException("This code branch should be unreachable.")
+case class UnboundIdentifier(str: String) extends RuntimeException(s"Unbound Identifier: $str")
 
 private[rehearsal] object PlusHelpers {
+
   def calculateConsts(stmt: Statement): (Set[Path], Set[String]) = {
     type Result = (Set[Path], Set[String])
+    type Env = Map[String, Expr]
 
     implicit class RichTuple(tup: Result) {
       def union(other: Result): Result = (tup._1 union other._1, tup._2 union other._2)
     }
 
-    def genPred(pred: Pred): Result = pred match {
+    def genPred(pred: Pred)(implicit env: Env): Result = pred match {
       case PTrue | PFalse => (Set(), Set())
       case PAnd(lhs, rhs) => genPred(lhs) union genPred(rhs)
       case POr(lhs, rhs) => genPred(lhs) union genPred(rhs)
@@ -24,8 +27,8 @@ private[rehearsal] object PlusHelpers {
       case PTestFileContains(path, contents) => genExpr(path) union genExpr(contents)
     }
 
-    def genExpr(expr: Expr): Result = expr match {
-      case EId(_) => (Set(), Set())
+    def genExpr(expr: Expr)(implicit env: Env): Result = expr match {
+      case EId(id) => genExpr(env.getOrElse(id, throw UnboundIdentifier(id)))
       case EPath(CPath(p, _)) => (p.path.ancestors union Set(p.path), Set())
       case EPath(_) => throw Unreachable
       case EString(CString(s, _)) => (Set(), Set(s))
@@ -33,17 +36,17 @@ private[rehearsal] object PlusHelpers {
       case EParent(e) => genExpr(e)
       case EConcat(lhs, rhs) => {
         val (lhsRes, rhsRes) = (genExpr(lhs), genExpr(rhs))
-        val concatPaths = for (p1 <- lhsRes._1; p2 <- rhsRes._1) yield (p1 resolve p2)
+        val concatPaths = for (p1 <- lhsRes._1; p2 <- rhsRes._1) yield (p1 concat p2)
         val concatStrings = for (s1 <- lhsRes._2; s2 <- rhsRes._2) yield (s1 + s2)
         lhsRes union rhsRes union (concatPaths, concatStrings)
       }
       case EIf(p, e1, e2) => genPred(p) union genExpr(e1) union genExpr(e2)
     }
 
-    def genStmt(stmt: Statement): Result = stmt match {
+    def genStmt(stmt: Statement)(implicit env: Env): Result = stmt match {
       case SError => (Set(), Set())
       case SSkip => (Set(), Set())
-      case SLet(_, e, s) => genExpr(e) union genStmt(s)
+      case SLet(id, e, s) => genExpr(e) union genStmt(s)(env + (id -> e))
       case SIf(p, s1, s2) => genPred(p) union genStmt(s1) union genStmt(s2)
       case SSeq(s1, s2) => genStmt(s1) union genStmt(s2)
       case SMkdir(path) => genExpr(path)
@@ -52,7 +55,7 @@ private[rehearsal] object PlusHelpers {
       case SCp(src, dst) => genExpr(src) union genExpr(dst)
     }
 
-    genStmt(stmt)
+    genStmt(stmt)(Map())
   }
 
   def generateSoftValueConstraints(stmt: Statement, paths: Set[Path]): Seq[ValueConstraint] = {

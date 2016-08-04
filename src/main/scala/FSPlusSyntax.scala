@@ -1,6 +1,7 @@
 package rehearsal
 
 import PrettyFSPlus._
+import Implicits.RichPath
 
 object FSPlusSyntax {
   type Substitution = Map[Int, Const]
@@ -18,7 +19,7 @@ object FSPlusSyntax {
     def path(): Path = this match {
       case JavaPath(p) => p
       case Parent(p) => p.path.getParent
-      case Concat(lhs, rhs) => lhs.path resolve rhs.path
+      case Concat(lhs, rhs) => lhs.path concat rhs.path
     }
   }
 

@@ -12,6 +12,7 @@ import rehearsal.FSPlusSyntax.{StringConstraint, StringLocationConstraint}
 import rehearsal.FSPlusTrace.{Type, TPath, TString}
 import rehearsal.{FSPlusSyntax => FSP}
 import rehearsal.{FSPlusTrace => T}
+import Implicits.RichPath
 
 case class SynthTypeError(msg: String) extends RuntimeException(msg)
 
@@ -23,8 +24,12 @@ object UpdateSynth {
   def synthesize(stmt: Statement, cs: Seq[ValueConstraint]): Option[Substitution] = {
     val (paths, strings) = PlusHelpers.calculateConsts(stmt)
     val pathCs = cs.filter(_.isInstanceOf[PathConstraint]).map(_.asInstanceOf[PathConstraint])
-    val allPaths = pathCs.flatMap(c => Seq(c.path) ++ c.path.ancestors).toSet ++ paths
     val stringCs = cs.filter(_.isInstanceOf[StringConstraint]).map(_.asInstanceOf[StringConstraint])
+    val constraintPaths = {
+      pathCs.flatMap(c => Seq(c.path) ++ c.path.ancestors).toSet ++
+      stringCs.flatMap(c => Seq(c.path) ++ c.path.ancestors).toSet
+    }
+    val allPaths = constraintPaths ++ paths
     val allStrings = stringCs.map(_.contents).toSet ++ Set("") ++ strings
 
     // Calculate soft constraints
@@ -96,27 +101,29 @@ class UpdateSynth(paths: Set[Path], strings: Set[String]) {
   }
 
   // Generate path concatenation function.
-  eval(DeclareFun(SSymbol("resolve"), Seq(pathSort, pathSort), pathSort))
+  val concatPaths = "cat-paths".id
+  eval(DeclareFun(SSymbol("cat-paths"), Seq(pathSort, pathSort), pathSort))
   for (p1 <- paths; p2 <- paths) {
-    if (paths.contains(p1 resolve p2)) {
+    if (paths.contains(p1 concat p2)) {
       eval(Assert(
         Equals(
-          FunctionApplication("resolve".id, Seq(
+          FunctionApplication(concatPaths, Seq(
             PlusHelpers.stringifyPath(p1).id, PlusHelpers.stringifyPath(p2).id
           )),
-          PlusHelpers.stringifyPath(p1 resolve p2).id
+          PlusHelpers.stringifyPath(p1 concat p2).id
         )
       ))
     }
   }
 
   // Generate string concatenation function.
-  eval(DeclareFun(SSymbol("merge"), Seq(stringSort, stringSort), stringSort))
+  val concatStrings = "cat-strings".id
+  eval(DeclareFun(SSymbol("cat-strings"), Seq(stringSort, stringSort), stringSort))
   for (s1 <- strings; s2 <- strings) {
     if (strings.contains(s1 + s2)) {
       eval(Assert(
         Equals(
-          FunctionApplication("merge".id, Seq(strMap.rep(s1).id, strMap.rep(s2).id)),
+          FunctionApplication(concatStrings, Seq(strMap.rep(s1).id, strMap.rep(s2).id)),
           strMap.rep(s1 + s2).id
         )
       ))
@@ -473,10 +480,10 @@ class UpdateSynth(paths: Set[Path], strings: Set[String]) {
       case T.EParent(e) => (FunctionApplication("parent".id, Seq(convert(e)._1)), T.TPath)
       case T.EConcat(lhs, rhs) => (convert(lhs), convert(rhs)) match {
         case ((lhs, T.TPath), (rhs, T.TPath)) => (FunctionApplication(
-          "resolve".id, Seq(lhs, rhs)
+          concatPaths, Seq(lhs, rhs)
         ), T.TPath)
         case ((lhs, T.TString), (rhs, T.TString)) => (FunctionApplication(
-          "merge".id, Seq(lhs, rhs)
+          concatStrings, Seq(lhs, rhs)
         ), T.TString)
         case ((_, t1), (_, t2)) => throw SynthTypeError(s"Type mismatch: $t1, $t2")
       }
