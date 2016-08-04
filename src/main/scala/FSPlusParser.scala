@@ -7,6 +7,8 @@ import FSPlusSyntax._
 private class FSPlusParser extends RegexParsers with PackratParsers {
   type P[T] = PackratParser[T]
 
+  override protected val whiteSpace = """(\s|#.*|(/\*((\*[^/])|[^*])*\*/))+""".r
+
   lazy val id: P[String] = "" ~> "[a-z_][a-zA-Z0-9_]*".r
   lazy val quotedText: P[String] = "\"" ~> "[^\"]*".r <~ "\""
   lazy val angleQuotedText: P[String] = "<" ~> "[^>]*".r <~ ">"
@@ -16,7 +18,7 @@ private class FSPlusParser extends RegexParsers with PackratParsers {
     "true" ^^ { _ => PTrue } |
     "false" ^^ { _ => PFalse } |
     "file?(" ~> expr <~ ")" ^^ { case path => PTestFileState(path, IsFile("")) } |
-    "contains?(" ~> expr ~ ("," ~> expr <~ ")") ^^ { case path ~ conts => PTestFileContains(path, conts) } | 
+    "contains?(" ~> expr ~ ("," ~> expr <~ ")") ^^ { case path ~ conts => PTestFileContains(path, conts) } |
     "dir?(" ~> expr <~ ")" ^^ { case path => PTestFileState(path, IsDir) } |
     "dne?(" ~> expr <~ ")" ^^ { case path => PTestFileState(path, DoesNotExist) } |
     "(" ~> pred <~ ")"
@@ -104,8 +106,8 @@ private class FSPlusParser extends RegexParsers with PackratParsers {
   lazy val constraint: P[ValueConstraint] =
     stringConstraint | pathConstraint
 
-  lazy val constraints: P[Seq[ValueConstraint]] = 
-    repsep(constraint, ",") 
+  lazy val constraints: P[Seq[ValueConstraint]] =
+    repsep(constraint, ",")
 }
 
 object FSPlusParser {
