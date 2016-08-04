@@ -1,34 +1,43 @@
 package rehearsal
 
-import FSPlusSyntax.{FileState, DoesNotExist, IsDir, IsFile}
+import org.bitbucket.inkytonik.kiama.output.PrettyPrinter
 import FSPlusTrace._
+import FSPlusSyntax.{FileState, IsFile, IsDir, DoesNotExist}
 
-private[rehearsal] object PrettyFSPlusTrace {
-  def prettyStmt(stmt: Statement): String = stmt match {
+object PrettyFSPlusTrace {
+  import rehearsal.{FSPlusTracePretty => P}
+
+  def prettyStmt(stmt: Statement): String = P.layout(P.prettyStmt(stmt))
+  def prettyExpr(expr: Expr): String = P.layout(P.prettyExpr(expr))
+  def prettyPred(pred: Pred): String = P.layout(P.prettyPred(pred))
+}
+
+private object FSPlusTracePretty extends PrettyPrinter {
+
+  override val defaultIndent = 0
+
+  def prettyStmt(stmt: Statement): Doc = stmt match {
     case SError => "error"
     case SSkip => "skip"
-    case SIf(p, s1, s2) => s"if ${prettyPred(p)} then ${prettyStmt(s1)} else ${prettyStmt(s2)}"
-    case SSeq(s1, s2) => s"${prettyStmt(s1)}; ${prettyStmt(s2)}"
-    case SMkdir(p) => s"mkdir(${prettyExpr(p)})"
-    case SCreateFile(p, c) => s"mkfile(${prettyExpr(p)}, ${prettyExpr(c)})"
-    case SRm(p) => s"rm(${prettyExpr(p)})"
-    case SCp(src, dst) => s"cp(${prettyExpr(src)}, ${prettyExpr(dst)})"
+    case SIf(p, s1, s2) => {
+      "if" <+> prettyPred(p) <@> "then" <+> indent(prettyStmt(s1)) <@> "else" <+>
+      indent(prettyStmt(s2))
+    }
+    case SSeq(s1, s2) => prettyStmt(s1) <> semi <@> prettyStmt(s2)
+    case SMkdir(p) => "mkdir" <> parens(prettyExpr(p))
+    case SCreateFile(p, c) => "mkfile" <> parens(prettyExpr(p) <> comma <+> prettyExpr(c))
+    case SRm(p) => "rm" <> parens(prettyExpr(p))
+    case SCp(src, dst) => "cp" <> parens(prettyExpr(src) <> comma <+> prettyExpr(dst))
   }
 
-  sealed trait ExprCxt
-  case object ConcatCxt extends ExprCxt
-  case object DefaultCxt extends ExprCxt
-
-  def prettyExpr(expr: Expr): String = prettyExpr(DefaultCxt, expr)
-
-  def prettyExpr(cxt: ExprCxt, expr: Expr): String = expr match {
-    case EHole(_, loc) => s"\u2022[$loc]"
-    case EParent(e) => s"parent(${prettyExpr(e)})"
-    case EConcat(lhs, rhs) => cxt match {
-      case ConcatCxt => s"(${prettyExpr(ConcatCxt, lhs)} + ${prettyExpr(ConcatCxt, rhs)})"
-      case DefaultCxt => s"${prettyExpr(ConcatCxt, lhs)} + ${prettyExpr(ConcatCxt, rhs)}"
+  def prettyExpr(expr: Expr): Doc = expr match {
+    case EHole(_, loc) => "\u2022" <> brackets(loc.toString)
+    case EParent(e) => "parent" <> parens(prettyExpr(e))
+    case EConcat(lhs, rhs) => prettyExpr(lhs) <+> "+" <+> prettyExpr(rhs)
+    case EIf(p, e1, e2) => {
+      "if" <+> prettyPred(p) <@> "then" <+> indent(prettyExpr(e1)) <@> "else" <+>
+      indent(prettyExpr(e2))
     }
-    case EIf(p, e1, e2) => s"if ${prettyPred(p)} then ${prettyExpr(e1)} else ${prettyExpr(e2)}"
   }
 
   sealed trait PredCxt
@@ -36,37 +45,37 @@ private[rehearsal] object PrettyFSPlusTrace {
   case object OrCxt extends PredCxt
   case object NotCxt extends PredCxt
 
-  def prettyPred(pred: Pred): String = prettyPred(NotCxt, pred)
+  def prettyPred(pred: Pred): Doc = prettyPred(NotCxt, pred)
 
-  def prettyPred(cxt: PredCxt, pred: Pred): String = pred match {
+  def prettyPred(cxt: PredCxt, pred: Pred): Doc = pred match {
     case PTrue => "true"
     case PFalse => "false"
-    case PTestFileState(p, st) => s"${prettyFileState(st)}?(${prettyExpr(p)})"
-    case PTestFileContains(p, cnts) => s"contains?(${prettyExpr(p)}, ${prettyExpr(cnts)})"
-    case PNot(PTrue) => "!true"
-    case PNot(PFalse) => "!false"
-    case PNot(PTestFileState(p, st)) => s"!${prettyFileState(st)}?(${prettyExpr(p)})"
-    case PNot(p) => s"!(${prettyPred(NotCxt, p)})"
+    case PTestFileState(p, st) => prettyFileState(st) <> question <> parens(prettyExpr(p))
+    case PTestFileContains(p, cts) => "contains" <> question <> parens(
+      prettyExpr(p) <> comma <+> prettyExpr(cts)
+    )
+    case PNot(prd@PTestFileState(_, _)) => exclamation <> prettyPred(NotCxt, prd)
+    case PNot(prd@PTestFileContains(_, _)) => exclamation <> prettyPred(NotCxt, prd)
+    case PNot(p) => exclamation <> parens(prettyPred(NotCxt, p))
     case PAnd(lhs, rhs) => {
       val (ls, rs) = (prettyPred(AndCxt, lhs), prettyPred(AndCxt, rhs))
       cxt match {
-        case AndCxt | NotCxt => s"$ls && $rs"
-        case OrCxt => s"($ls && $rs)"
+        case AndCxt | NotCxt => ls <+> "&&" <+> rs
+        case OrCxt => parens(ls <+> "&&" <+> rs)
       }
     }
     case POr(lhs, rhs) => {
       val (ls, rs) = (prettyPred(OrCxt, lhs), prettyPred(OrCxt, rhs))
       cxt match {
-        case OrCxt | NotCxt => s"$ls || $rs"
-        case AndCxt => s"($ls || $rs)"
+        case OrCxt | NotCxt => ls <+> "||" <+> rs
+        case AndCxt => parens(ls <+> "||" <+> rs)
       }
     }
   }
 
-  def prettyFileState(st: FileState): String = st match {
+  def prettyFileState(st: FileState): Doc = st match {
     case IsFile(_) => "file"
     case IsDir => "dir"
     case DoesNotExist => "dne"
   }
 }
-
