@@ -113,6 +113,15 @@ class UpdateSynth(paths: Set[Path], strings: Set[String]) {
           PlusHelpers.stringifyPath(p1 concat p2).id
         )
       ))
+    } else {
+      eval(Assert(
+        Equals(
+          FunctionApplication(concatPaths, Seq(
+            PlusHelpers.stringifyPath(p1).id, PlusHelpers.stringifyPath(p2).id
+          )),
+          "NoPath".id
+        )
+      ))
     }
   }
 
@@ -176,9 +185,9 @@ class UpdateSynth(paths: Set[Path], strings: Set[String]) {
         case TPath => pathSort
         case TString => stringSort
       }))
-      //if (typ == TPath) {
-      //  eval(Assert(Not(Equals(hole.id, "NoPath".id))))
-      //}
+      if (typ == TPath) {
+        eval(Assert(Not(Equals(hole.id, "NoPath".id))))
+      }
       holes = holes + (loc -> hole.id)
       hole.id
     }
