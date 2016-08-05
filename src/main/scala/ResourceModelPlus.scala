@@ -62,7 +62,7 @@ object ResourceModelPlus {
           (leftTerm, rightTerm) => EConcat(leftTerm, rightTerm)
         }
       }
-      case None => EString(CString(str, locMap(str)))
+      case None => EString(CString(str, locMap.getOrElse(str, -1)))
     }
 
     def toFSPlus(path: Path, locMap: Map[String, Int]): Expr = map.get(path.toString) match {
@@ -72,7 +72,7 @@ object ResourceModelPlus {
           (leftTerm, rightTerm) => EConcat(leftTerm, rightTerm)
         }
       }
-      case None => EPath(CPath(JavaPath(path), locMap(path.toString)))
+      case None => EPath(CPath(JavaPath(path), locMap.getOrElse(path.toString, -1)))
     }
   }
 
@@ -238,7 +238,7 @@ object ResourceModelPlus {
 
       val content = "arbitrary content"
       val mkfiles = files.toSeq.map { p =>
-        mkfile(interpMap.toFSPlus(p, locMap), EString(CString(content, locMap(content))))
+        mkfile(interpMap.toFSPlus(p, locMap), EString(CString(content, -1)))
       }
 
       val stmts = mkdirs ++ mkfiles
@@ -249,7 +249,7 @@ object ResourceModelPlus {
       SLet("path", EConcat(EPath(CPath(JavaPath(main), mLoc)), EPath(CPath(JavaPath(sub), sLoc))),
         ite(PTestFileState(EId("path"), IsFile("")),
           SSkip,
-          mkfile(EId("path"), EString(CString(content, locMap(content)))) >> seq(stmts: _*)
+          mkfile(EId("path"), EString(CString(content, -1))) >> seq(stmts: _*)
         )
       )
     }
