@@ -261,8 +261,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String]) {
       eval(Assert(Equals(pred.id, convertPred(p))))
       val n1 = assertTrace(s1, cond && pred.id)
       val n2 = assertTrace(s2, cond && Not(pred.id))
-      if (n1 > n2) {
-        for (nPrime <- n2 until n1) {
+        for (nPrime <- Math.min(n1, n2) until Math.max(n1, n2)) {
           // Carry over all paths between simulated states.
           eval(Assert(Implies(
             cond && Not(pred.id),
@@ -280,30 +279,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String]) {
             )
           )))
         }
-        n1
-      } else if (n2 > n1) {
-        for (nPrime <- n1 until n2) {
-          // Carry over all paths between simulated states.
-          eval(Assert(Implies(
-            cond && pred.id,
-            Forall(SortedVar(SSymbol("p"), pathSort), Seq(),
-              And(
-                Equals(
-                    FunctionApplication(stateN(nPrime + 1), Seq("p".id)),
-                    FunctionApplication(stateN(nPrime), Seq("p".id))
-                ),
-                Equals(
-                  FunctionApplication(containsN(nPrime + 1), Seq("p".id)),
-                  FunctionApplication(containsN(nPrime), Seq("p".id))
-                )
-              )
-            )
-          )))
-        }
-        n2
-      } else {
-        n1
-      }
+        Math.max(n1, n2)
     }
     case T.SSeq(s1, s2) => {
       val nPrime = assertTrace(s1, cond)
