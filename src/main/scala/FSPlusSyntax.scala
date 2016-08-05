@@ -40,10 +40,13 @@ object FSPlusSyntax {
   case object IsDir extends FileState
   case object DoesNotExist extends FileState
 
+
+  // Given file systems Fi and Ff, Ff - Fi returns a sequence of constrains that the represent
+  // the path changes from Fi to Ff.
   case class FileSystem(paths: Map[Path, FileState]) {
     def -(other: FileSystem): Seq[ValueConstraint] = {
-      val filtered = other.paths.toSeq.filter { case (path, state) =>
-          val oldSt = paths.getOrElse(path, throw FileNotFoundException(s"path $path is missing."))
+      val filtered = paths.toSeq.filter { case (path, state) =>
+          val oldSt = other.paths.getOrElse(path, throw FileNotFoundException(s"path $path is missing."))
           oldSt != state
       }
 
