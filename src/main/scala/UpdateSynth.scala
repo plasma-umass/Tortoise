@@ -20,7 +20,7 @@ case class SynthTypeError(msg: String) extends RuntimeException(msg)
 object UpdateSynth {
   import FSP._
   import Implicits._
-
+  import java.nio.file.Paths
 
   def synthesize(stmt: Statement, cs: Seq[ValueConstraint]): Option[Substitution] = {
 
@@ -32,7 +32,7 @@ object UpdateSynth {
       stringCs.flatMap(c => Seq(c.path) ++ c.path.ancestors).toSet
     }
 
-    val basePaths = constraintPaths ++ paths
+    val basePaths = constraintPaths ++ paths ++ Settings.assumedDirs
     val allStrings = stringCs.map(_.contents).toSet ++ Set("") ++ strings
 
     val allPaths: Set[Path] = basePaths.flatMap { path =>
@@ -47,14 +47,15 @@ object UpdateSynth {
     val softLocs = PlusHelpers.generateSoftLocationConstraints(stmt)
 
     val soft = softVals union softLocs
-    val impl = new UpdateSynth(allPaths, allStrings)
+    val defaultFS = Settings.assumedDirs.map((_, IsDir)).toMap + ((Paths.get("/"), IsDir))
+    val impl = new UpdateSynth(allPaths, allStrings, defaultFS)
 
     val trace = FSPlusEval.tracingEval(stmt)
     impl.synthesize(trace, cs, soft)
   }
 }
 
-class UpdateSynth(paths: Set[Path], strings: Set[String]) {
+class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, FileState]) {
   import SMT._
   import SMT.Implicits._
 
@@ -165,11 +166,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String]) {
     eval(Assert(
       Equals(
         FunctionApplication("state1?".id, Seq(PlusHelpers.stringifyPath(path).id)),
-        if (path == java.nio.file.Paths.get("/")) {
-          "Dir".id
-        } else {
-          "Null".id
-        }
+        defaultFS.get(path).map(convertFileState(_)).getOrElse("Null".id)
       )
     ))
   }
@@ -180,7 +177,10 @@ class UpdateSynth(paths: Set[Path], strings: Set[String]) {
     eval(Assert(
       Equals(
         FunctionApplication("contains1?".id, Seq(PlusHelpers.stringifyPath(path).id)),
-        strMap.rep("").id
+        defaultFS.get(path).map {
+          case IsFile(str) => strMap.rep(str).id
+          case _ => strMap.rep("").id
+        }.getOrElse(strMap.rep("").id)
       )
     ))
   }

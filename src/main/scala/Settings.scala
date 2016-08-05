@@ -31,6 +31,6 @@ object Settings {
   private val assumedDirsRaw = conf.stringList("assumed-directories")
     .getOrElse(throw ConfigError("assumed-directories must be a list of strings"))
 
-  val assumedDirs = (Seq("/", modelRoot) ++ assumedDirsRaw).map(_.toPath)
+  val assumedDirs = (Seq("/", modelRoot) ++ assumedDirsRaw).map(_.toPath).toSet
 
 }
