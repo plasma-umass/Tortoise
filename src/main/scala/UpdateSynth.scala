@@ -583,29 +583,6 @@ class UpdateSynth(paths: Set[Path], strings: Set[String]) {
       }
     }
 
-    // Convert soft constraints with not-present-in-source locations to hard constraints.
-    // The reason for this is that we don't want Z3 to change things that come from our model.
-    soft.foreach {
-      // "Soft" path location constraints
-      case PathLocationConstraint(loc, path) if loc < 0 => {
-        eval(Assert(Equals(
-          mkHole(loc, TPath),
-          PlusHelpers.stringifyPath(path).id
-        )))
-      }
-
-      // "Soft" string location constraints
-      case StringLocationConstraint(loc, str) if loc < 0 => {
-        eval(Assert(Equals(
-          mkHole(loc, TString),
-          strMap.rep(str).id
-        )))
-      }
-
-      // Do nothing on truly soft constraints.
-      case _ => ()
-    }
-
     // Soft constraints...
     val counts = soft.filter {
       // Filter out "soft" constraints dealing with not-present-in-source locations.
