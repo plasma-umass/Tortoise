@@ -1,0 +1,6 @@
+mkdir(</foo>);
+if dir?(</foo>)
+then mkdir(</bar>);
+     mkdir(</bar/awe>)
+else mkdir(</baz>);
+     mkdir(</baz/awe>)

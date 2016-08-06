@@ -159,24 +159,26 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
   }
 
   // Generate initial state function (state1?)
-  eval(DeclareFun(SSymbol("state1?"), Seq(pathSort), stateSort))
+  val initialState = FunName("state", 1)
+  eval(DeclareFun(initialState.sym, Seq(pathSort), stateSort))
 
-  eval(Assert(Equals(FunctionApplication("state1?".id, Seq("NoPath".id)), "Null".id)))
+  eval(Assert(Equals(FunctionApplication(initialState.id, Seq("NoPath".id)), "Null".id)))
   for (path <- paths) {
     eval(Assert(
       Equals(
-        FunctionApplication("state1?".id, Seq(PlusHelpers.stringifyPath(path).id)),
+        FunctionApplication(initialState.id, Seq(PlusHelpers.stringifyPath(path).id)),
         defaultFS.get(path).map(convertFileState(_)).getOrElse("Null".id)
       )
     ))
   }
 
   // Generate initial contains function (contains1?)
-  eval(DeclareFun(SSymbol("contains1?"), Seq(pathSort), stringSort))
+  val initialContains = FunName("contains", 1)
+  eval(DeclareFun(initialContains.sym, Seq(pathSort), stringSort))
   for (path <- paths) {
     eval(Assert(
       Equals(
-        FunctionApplication("contains1?".id, Seq(PlusHelpers.stringifyPath(path).id)),
+        FunctionApplication(initialContains.id, Seq(PlusHelpers.stringifyPath(path).id)),
         defaultFS.get(path).map {
           case IsFile(str) => strMap.rep(str).id
           case _ => strMap.rep("").id
@@ -206,274 +208,34 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
       if (typ == TPath) {
         eval(Assert(Not(Equals(hole.id, "NoPath".id))))
       }
-      holes = holes + (loc -> hole.id)
+      holes += (loc -> hole.id)
       hole.id
     }
   }
 
-  def stateN(n: Int): QualifiedIdentifier = s"state$n?".id
-  def containsN(n: Int): QualifiedIdentifier = s"contains$n?".id
-
-  def declareStateN(n: Int): Command = DeclareFun(SSymbol(s"state$n?"), Seq(pathSort), stateSort)
-  def declareContainsN(n: Int): Command = DeclareFun(
-    SSymbol(s"contains$n?"), Seq(pathSort), stringSort
-  )
-
-  def declareStates(trace: T.Statement): Int = declareStates(trace, 2)
-
-  var decls: Set[Int] = Set()
-  def declareStates(trace: T.Statement, n: Int): Int = trace match {
-    case T.SError => n
-    case T.SSkip => n
-    case T.SIf(_, s1, s2) => {
-      val n1 = declareStates(s1, n)
-      val n2 = declareStates(s2, n)
-      Math.max(n1, n2)
-    }
-    case T.SSeq(s1, s2) => {
-      val nPrime = declareStates(s1, n)
-      declareStates(s2, nPrime)
-    }
-    case T.SMkdir(_) | T.SCreateFile(_, _) | T.SRm(_) | T.SCp(_, _) => {
-      if (!decls.contains(n)) {
-        eval(declareStateN(n))
-        eval(declareContainsN(n))
-        decls = decls + n
-      }
-      n + 1
+  private[UpdateSynth] case class FunName(name: String, num: Int) {
+    override def toString: String = s"$name$num?"
+    def id: QualifiedIdentifier = s"$this".id
+    def sym: SSymbol = SSymbol(s"$this")
+    def next: FunName = FunName(name, num + 1)
+    def last: FunName = {
+      if (num == 0) throw new RuntimeException(s"No last FunName for $this")
+      else FunName(name, num - 1)
     }
   }
 
-  def assertTrace(trace: T.Statement): Unit = assertTrace(trace, True())(1)
-
-  def assertTrace(trace: T.Statement, cond: Term)(implicit n: Int): Int = trace match {
-    case T.SError => {
-      eval(Assert(Implies(
-        cond,
-        Equals("error".id, True())
-      )))
-      n
-    }
-    case T.SSkip => n
-    case T.SIf(p, s1, s2) => {
-      val pred = freshName("pred")
-      eval(DeclareConst(pred, BoolSort()))
-      eval(Assert(Equals(pred.id, convertPred(p))))
-      val n1 = assertTrace(s1, cond && pred.id)
-      val n2 = assertTrace(s2, cond && Not(pred.id))
-        for (nPrime <- Math.min(n1, n2) until Math.max(n1, n2)) {
-          // Carry over all paths between simulated states.
-          eval(Assert(Implies(
-            cond && Not(pred.id),
-            Forall(SortedVar(SSymbol("p"), pathSort), Seq(),
-              And(
-                Equals(
-                  FunctionApplication(stateN(nPrime + 1), Seq("p".id)),
-                  FunctionApplication(stateN(nPrime), Seq("p".id))
-                ),
-                Equals(
-                  FunctionApplication(containsN(nPrime + 1), Seq("p".id)),
-                  FunctionApplication(containsN(nPrime), Seq("p".id))
-                )
-              )
-            )
-          )))
-        }
-        Math.max(n1, n2)
-    }
-    case T.SSeq(s1, s2) => {
-      val nPrime = assertTrace(s1, cond)
-      assertTrace(s2, cond)(nPrime)
-    }
-    case T.SMkdir(path) => {
-      val pathTerm = convertExpr(path)
-
-      // Carry over untouched paths between states.
-      eval(Assert(Implies(
-        cond,
-        Forall(SortedVar(SSymbol("p"), pathSort), Seq(),
-          And(
-            Implies(
-              Not(Equals("p".id, pathTerm)),
-              Equals(
-                FunctionApplication(stateN(n + 1), Seq("p".id)),
-                FunctionApplication(stateN(n), Seq("p".id))
-              )
-            ),
-            Equals(
-              FunctionApplication(containsN(n + 1), Seq("p".id)),
-              FunctionApplication(containsN(n), Seq("p".id))
-            )
-          )
-        )
-      )))
-
-      // Semantics of mkdir.
-      eval(Assert(Implies(
-        cond,
-        ITE(
-          And(
-            Equals(FunctionApplication(stateN(n), Seq(pathTerm)), "Null".id),
-            Equals(FunctionApplication(stateN(n), Seq(
-              FunctionApplication("parent".id, Seq(pathTerm))
-            )), "Dir".id)
-          ),
-          Equals(FunctionApplication(stateN(n + 1), Seq(pathTerm)), "Dir".id),
-          Equals("error".id, True())
-        )
-      )))
-
-      n + 1
-    }
-    case T.SCreateFile(path, contents) => {
-      val pathTerm = convertExpr(path)
-      val contentsTerm = convertExpr(contents)
-
-      // Carry over untouched paths between states.
-      eval(Assert(Implies(
-        cond,
-        Forall(SortedVar(SSymbol("p"), pathSort), Seq(),
-          Implies(
-            Not(Equals("p".id, pathTerm)),
-            And(
-              Equals(
-                FunctionApplication(stateN(n + 1), Seq("p".id)),
-                FunctionApplication(stateN(n), Seq("p".id))
-              ),
-              Equals(
-                FunctionApplication(containsN(n + 1), Seq("p".id)),
-                FunctionApplication(containsN(n), Seq("p".id))
-              )
-            )
-          )
-        )
-      )))
-
-      // Semantics of createfile.
-      eval(Assert(Implies(
-        cond,
-        ITE(
-          And(
-            Equals(FunctionApplication(stateN(n), Seq(pathTerm)), "Null".id),
-            Equals(FunctionApplication(stateN(n), Seq(
-              FunctionApplication("parent".id, Seq(pathTerm))
-            )), "Dir".id)
-          ),
-          And(
-            Equals(FunctionApplication(stateN(n + 1), Seq(pathTerm)), "File".id),
-            Equals(FunctionApplication(containsN(n + 1), Seq(pathTerm)), contentsTerm)
-          ),
-          Equals("error".id, True())
-        )
-      )))
-
-      n + 1
-    }
-    case T.SRm(path) => {
-      val pathTerm = convertExpr(path)
-
-      // Carry over untouched paths between states.
-      eval(Assert(Implies(
-        cond,
-        Forall(SortedVar(SSymbol("p"), pathSort), Seq(),
-          And(
-            Implies(
-              Not(Equals("p".id, pathTerm)),
-              Equals(
-                FunctionApplication(stateN(n + 1), Seq("p".id)),
-                FunctionApplication(stateN(n), Seq("p".id))
-              )
-            ),
-            Equals(
-              FunctionApplication(containsN(n + 1), Seq("p".id)),
-              FunctionApplication(containsN(n), Seq("p".id))
-            )
-          )
-        )
-      )))
-
-      // Semantics of rm.
-      eval(Assert(Implies(
-        cond,
-        ITE(
-          Or(
-            Equals(FunctionApplication(stateN(n), Seq(pathTerm)), "File".id),
-            And(
-              Equals(FunctionApplication(stateN(n), Seq(pathTerm)), "Dir".id),
-              Forall(SortedVar(SSymbol("p"), pathSort), Seq(),
-                Implies(
-                  Equals(FunctionApplication("parent".id, Seq("p".id)), pathTerm),
-                  Equals(FunctionApplication(stateN(n), Seq("p".id)), "Null".id)
-                )
-              )
-            )
-          ),
-          Equals(FunctionApplication(stateN(n + 1), Seq(pathTerm)), "Null".id),
-          Equals("error".id, True())
-        )
-      )))
-
-      n + 1
-    }
-    case T.SCp(src, dst) => {
-      val srcTerm = convertExpr(src)
-      val dstTerm = convertExpr(dst)
-
-      // Carry over untouched paths between states.
-      eval(Assert(Implies(
-        cond,
-        Forall(SortedVar(SSymbol("p"), pathSort), Seq(),
-          Implies(
-            Not(Equals("p".id, dstTerm)),
-            And(
-              Equals(
-                FunctionApplication(stateN(n + 1), Seq("p".id)),
-                FunctionApplication(stateN(n), Seq("p".id))
-              ),
-              Equals(
-                FunctionApplication(containsN(n + 1), Seq("p".id)),
-                FunctionApplication(containsN(n), Seq("p".id))
-              )
-            )
-          )
-        )
-      )))
-
-      // Semantics of cp.
-      eval(Assert(Implies(
-        cond,
-        ITE(
-          And(
-            Equals(FunctionApplication(stateN(n), Seq(srcTerm)), "File".id),
-            Equals(FunctionApplication(stateN(n), Seq(dstTerm)), "Null".id)
-          ),
-          And(
-            Equals(FunctionApplication(stateN(n + 1), Seq(dstTerm)), "File".id),
-            Equals(
-              FunctionApplication(containsN(n + 1), Seq(dstTerm)),
-              FunctionApplication(containsN(n), Seq(srcTerm))
-            )
-          ),
-          Equals("error".id, True())
-        )
-      )))
-
-      n + 1
-    }
-  }
-
-  def convertPred(pred: T.Pred)(implicit n: Int): Term = pred match {
+  def convertPred(pred: T.Pred)(implicit fs: (FunName, FunName)): Term = pred match {
     case T.PTrue => True()
     case T.PFalse => False()
     case T.PAnd(lhs, rhs) => convertPred(lhs) && convertPred(rhs)
     case T.POr(lhs, rhs) => convertPred(lhs) || convertPred(rhs)
     case T.PNot(p) => Not(convertPred(p))
     case T.PTestFileState(path, state) => Equals(
-      FunctionApplication(stateN(n), Seq(convertExpr(path))),
+      FunctionApplication(fs._1.id, Seq(convertExpr(path))),
       convertFileState(state)
     )
     case T.PTestFileContains(path, cts) => Equals(
-      FunctionApplication(containsN(n), Seq(convertExpr(path))),
+      FunctionApplication(fs._2.id, Seq(convertExpr(path))),
       convertExpr(cts)
     )
   }
@@ -484,7 +246,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
     case DoesNotExist => "Null".id
   }
 
-  def convertExpr(expr: T.Expr)(implicit n: Int): Term = {
+  def convertExpr(expr: T.Expr)(implicit fs: (FunName, FunName)): Term = {
 
     def convert(expr: T.Expr): (Term, T.Type) = expr match {
       case T.EHole(typ, loc) => (mkHole(loc, typ), typ)
@@ -506,6 +268,219 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
 
     convert(expr)._1
   }
+
+  // Returns the last state function that was defined.
+  def defineFuns(trace: T.Statement, 
+    lastFuns: (FunName, FunName), 
+    currFuns: (FunName, FunName)): (FunName, FunName) = trace match {
+    case T.SError => {
+      eval(Assert(
+        Equals("error".id, True())
+      ))
+      lastFuns
+    }
+    case T.SSkip => lastFuns
+    case T.SMkdir(path) => {
+      val pathTerm = convertExpr(path)(lastFuns)
+      val (lastStateFun, lastContainsFun) = lastFuns
+      val (currStateFun, currContainsFun) = currFuns
+      
+      val assertNoError =
+        Assert(
+          ITE(
+            And(
+              Equals(FunctionApplication(lastStateFun.id, Seq(pathTerm)), "Null".id),
+              Equals(FunctionApplication(lastStateFun.id, Seq(
+                FunctionApplication("parent".id, Seq(pathTerm))
+              )), "Dir".id)
+            ),
+            True(),
+            Equals("error".id, True())
+          )
+        )
+      val stateFun =
+        DefineFun(FunDef(currStateFun.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stateSort,
+          ITE(
+            Equals("p".id, pathTerm),
+            "Dir".id,
+            FunctionApplication(lastStateFun.id, Seq("p".id))
+          )
+        ))
+      // Need to do this, other if doesn't work
+      val containsFun = 
+        DefineFun(FunDef(currContainsFun.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stringSort,
+          FunctionApplication(lastContainsFun.id, Seq("p".id))
+        ))
+
+      eval(assertNoError)
+      eval(containsFun)
+      eval(stateFun)
+      currFuns
+    }
+    case T.SCreateFile(path, cnts) => {
+      val pathTerm = convertExpr(path)(lastFuns)
+      val contentsTerm = convertExpr(cnts)(lastFuns)
+      val (lastStateFun, lastContainsFun) = lastFuns
+      val (currStateFun, currContainsFun) = currFuns
+
+      val assertNoError = 
+        Assert(
+          ITE(
+            And(
+              Equals(FunctionApplication(lastStateFun.id, Seq(pathTerm)), "Null".id),
+              Equals(FunctionApplication(lastStateFun.id, Seq(
+                FunctionApplication("parent".id, Seq(pathTerm))
+              )), "Dir".id)
+            ),
+            True(),
+            Equals("error".id, True())
+          )
+        )
+      val stateFun = 
+        DefineFun(FunDef(currStateFun.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stateSort,
+            ITE(
+              Equals("p".id, pathTerm),
+              "File".id,
+              FunctionApplication(lastStateFun.id, Seq("p".id))
+            )
+        ))
+      val containsFun = 
+        DefineFun(FunDef(currContainsFun.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stringSort,
+          ITE(
+            Equals("p".id, pathTerm),
+            contentsTerm,
+            FunctionApplication(lastContainsFun.id, Seq("p".id))
+          )
+        ))
+
+      eval(assertNoError)
+      eval(stateFun)
+      eval(containsFun)
+      currFuns
+    }
+    case T.SSeq(s1, s2) => {
+      val funPrimes = defineFuns(s1, lastFuns, currFuns)
+      defineFuns(s2, funPrimes, (funPrimes._1.next, funPrimes._2.next))
+    }
+    case T.SIf(pred, cons, alt) => {
+      val predTerm = convertPred(pred)(lastFuns)
+      val cName = (FunName(currFuns._1.toString + "Cons", 1), FunName(currFuns._2.toString + "Cons", 1))
+      val aName = (FunName(currFuns._1.toString + "Alt", 1), FunName(currFuns._2.toString + "Alt", 1))
+
+      val (consStateFun, consContainsFun) = defineFuns(cons, lastFuns, cName)
+      val (altStateFun, altContainsFun) = defineFuns(alt, lastFuns, aName)
+      
+      val (currStateFun, currContainsFun) = currFuns
+
+      val stateFun = 
+        DefineFun(FunDef(currStateFun.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stateSort,
+          ITE(
+            predTerm,
+            FunctionApplication(consStateFun.id, Seq("p".id)),
+            FunctionApplication(altStateFun.id, Seq("p".id))
+          )
+        ))
+      val containsFun =
+        DefineFun(FunDef(currContainsFun.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stringSort,
+          ITE(
+            predTerm,
+            FunctionApplication(consContainsFun.id, Seq("p".id)),
+            FunctionApplication(altContainsFun.id, Seq("p".id))
+          )
+        ))
+
+      eval(stateFun)
+      eval(containsFun)
+      currFuns
+    }
+    case T.SRm(path) => {
+      val pathTerm = convertExpr(path)(lastFuns)
+      val (lastStateFun, lastContainsFun) = lastFuns
+      val (currStateFun, currContainsFun) = currFuns
+
+      val assertNoError = 
+        Assert(
+          ITE(
+            Or(
+              Equals(FunctionApplication(lastStateFun.id, Seq(pathTerm)), "File".id),
+              And(
+                Equals(FunctionApplication(lastStateFun.id, Seq(pathTerm)), "Dir".id),
+                Forall(SortedVar(SSymbol("p"), pathSort), Seq(),
+                  Implies(
+                    Equals(FunctionApplication("parent".id, Seq("p".id)), pathTerm),
+                    Equals(FunctionApplication(lastStateFun.id, Seq("p".id)), "Null".id)
+                  )
+                )
+              )
+            ),
+            True(),
+            Equals("error".id, True())
+          )
+        )
+      val stateFun = 
+        DefineFun(FunDef(currStateFun.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stateSort,
+          ITE(
+            Equals("p".id, pathTerm),
+            "Null".id,
+            FunctionApplication(lastStateFun.id, Seq("p".id))
+          )
+        ))
+
+      val containsFun =
+        DefineFun(FunDef(currContainsFun.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stringSort,
+            ITE(
+              Equals("p".id, pathTerm),
+              "NoString".id,
+              FunctionApplication(lastContainsFun.id, Seq("p".id))
+            )
+          ))
+
+      eval(assertNoError)
+      eval(containsFun)
+      eval(stateFun)
+      currFuns
+    }
+    case T.SCp(p1, p2) => {
+      val srcTerm = convertExpr(p1)(lastFuns)
+      val dstTerm = convertExpr(p2)(lastFuns)
+      val (lastStateFun, lastContainsFun) = lastFuns
+      val (currStateFun, currContainsFun) = currFuns
+
+      val assertNoError = 
+        Assert(
+          ITE(
+            And(
+              Equals(FunctionApplication(lastStateFun.id, Seq(srcTerm)), "File".id),
+              Equals(FunctionApplication(lastStateFun.id, Seq(dstTerm)), "Null".id)
+            ),
+            True(),
+            Equals("error".id, True())
+          )
+        )
+      val stateFun =
+        DefineFun(FunDef(currStateFun.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stateSort,
+          ITE(
+            Equals("p".id, dstTerm),
+            "File".id,
+            FunctionApplication(lastStateFun.id, Seq("p".id))
+          )   
+        ))
+      val containsFun = 
+        DefineFun(FunDef(currContainsFun.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stringSort,
+            ITE(
+              Equals("p".id, dstTerm),
+              FunctionApplication(lastContainsFun.id, Seq(srcTerm)),
+              FunctionApplication(lastContainsFun.id, Seq("p".id))
+            )   
+        ))
+
+      eval(assertNoError)
+      eval(containsFun)
+      eval(stateFun)
+      currFuns
+    }
+  }
+
 
   def parseModel(exprs: List[SExpr]): Substitution = {
     def extractKey(str: String): Int = Integer.parseInt(
@@ -533,9 +508,10 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
   }
 
   def synthesize(trace: T.Statement, cs: Seq[ValueConstraint], soft: Seq[Constraint]) = {
-    // Initialization...
-    val lastN = declareStates(trace) - 1
-    assertTrace(trace)
+    val initialFuns = (initialState, initialContains)
+    val nextFuns = (initialState.next, initialContains.next)
+    val lastFuns = defineFuns(trace, initialFuns, nextFuns)
+    val (lastStateN, lastContainsN) = (lastFuns._1.id, lastFuns._2.id)
 
     // Hard constraints...
     cs.foreach {
@@ -543,7 +519,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
       case PathConstraint(path, st) => {
         val pathTerm = PlusHelpers.stringifyPath(path).id
         eval(Assert(Equals(
-          FunctionApplication(stateN(lastN), Seq(pathTerm)),
+          FunctionApplication(lastStateN, Seq(pathTerm)),
           convertFileState(st)
         )))
       }
@@ -553,7 +529,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
         val pathTerm = PlusHelpers.stringifyPath(path).id
         val strTerm = strMap.rep(str).id
         eval(Assert(Equals(
-          FunctionApplication(containsN(lastN), Seq(pathTerm)),
+          FunctionApplication(lastContainsN, Seq(pathTerm)),
           strTerm
         )))
       }
@@ -573,7 +549,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
         eval(DeclareConst(count, IntSort()))
         eval(Assert(ITE(
           Equals(
-            FunctionApplication(stateN(lastN), Seq(pathTerm)),
+            FunctionApplication(lastStateN, Seq(pathTerm)),
             convertFileState(st)
           ),
           Equals(count.id, SNumeral(1)),
@@ -603,7 +579,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
         eval(DeclareConst(count, IntSort()))
         eval(Assert(ITE(
           Equals(
-            FunctionApplication(containsN(lastN), Seq(pathTerm)),
+            FunctionApplication(lastContainsN, Seq(pathTerm)),
             strTerm
           ),
           Equals(count.id, SNumeral(1)),
