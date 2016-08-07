@@ -205,8 +205,9 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
         case TPath => pathSort
         case TString => stringSort
       }))
-      if (typ == TPath) {
-        eval(Assert(Not(Equals(hole.id, "NoPath".id))))
+      typ match {
+        case TPath => eval(Assert(Not(Equals(hole.id, "NoPath".id))))
+        case TString => eval(Assert(Not(Equals(hole.id, "NoString".id))))
       }
       holes += (loc -> hole.id)
       hole.id
@@ -306,10 +307,14 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
             FunctionApplication(lastStateFun.id, Seq("p".id))
           )
         ))
-      // Need to do this, other if doesn't work
+      // Need to do this, otherwise if doesn't work.
       val containsFun = 
         DefineFun(FunDef(currContainsFun.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stringSort,
-          FunctionApplication(lastContainsFun.id, Seq("p".id))
+          ITE(
+            Equals("p".id, pathTerm),
+            "NoString".id,
+            FunctionApplication(lastContainsFun.id, Seq("p".id))
+          )
         ))
 
       eval(assertNoError)
@@ -364,13 +369,13 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
     }
     case T.SIf(pred, cons, alt) => {
       val predTerm = convertPred(pred)(lastFuns)
-      val cName = (FunName(currFuns._1.toString + "Cons", 1), FunName(currFuns._2.toString + "Cons", 1))
-      val aName = (FunName(currFuns._1.toString + "Alt", 1), FunName(currFuns._2.toString + "Alt", 1))
+      val (currStateFun, currContainsFun) = currFuns
+
+      val cName = (FunName(currStateFun + "Cons", 1), FunName(currContainsFun + "Cons", 1))
+      val aName = (FunName(currStateFun + "Alt", 1), FunName(currContainsFun + "Alt", 1))
 
       val (consStateFun, consContainsFun) = defineFuns(cons, lastFuns, cName)
       val (altStateFun, altContainsFun) = defineFuns(alt, lastFuns, aName)
-      
-      val (currStateFun, currContainsFun) = currFuns
 
       val stateFun = 
         DefineFun(FunDef(currStateFun.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stateSort,
@@ -428,12 +433,12 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
 
       val containsFun =
         DefineFun(FunDef(currContainsFun.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stringSort,
-            ITE(
-              Equals("p".id, pathTerm),
-              "NoString".id,
-              FunctionApplication(lastContainsFun.id, Seq("p".id))
-            )
-          ))
+          ITE(
+            Equals("p".id, pathTerm),
+            "NoString".id,
+            FunctionApplication(lastContainsFun.id, Seq("p".id))
+          )
+        ))
 
       eval(assertNoError)
       eval(containsFun)
@@ -457,11 +462,13 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
             Equals("error".id, True())
           )
         )
+      // FIXME(rachit): I think these semantics are wrong. Once the copy operation is complete,
+      // there is no relation between src and dst
       val stateFun =
         DefineFun(FunDef(currStateFun.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stateSort,
           ITE(
             Equals("p".id, dstTerm),
-            "File".id,
+            FunctionApplication(lastStateFun.id, Seq(srcTerm)),
             FunctionApplication(lastStateFun.id, Seq("p".id))
           )   
         ))
@@ -528,10 +535,16 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
       case StringConstraint(path, str) => {
         val pathTerm = PlusHelpers.stringifyPath(path).id
         val strTerm = strMap.rep(str).id
-        eval(Assert(Equals(
-          FunctionApplication(lastContainsN, Seq(pathTerm)),
-          strTerm
-        )))
+        val assertion = Assert(And(
+          Equals(FunctionApplication(lastStateN, Seq(pathTerm)),
+            "File".id
+          ),
+          Equals(
+            FunctionApplication(lastContainsN, Seq(pathTerm)),
+            strTerm
+          )
+        ))
+        eval(assertion)
       }
     }
 
@@ -578,9 +591,15 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
         val count = freshName("count")
         eval(DeclareConst(count, IntSort()))
         eval(Assert(ITE(
-          Equals(
-            FunctionApplication(lastContainsN, Seq(pathTerm)),
-            strTerm
+          And(
+            Equals(
+              FunctionApplication(lastStateN, Seq(pathTerm)),
+              "File".id
+            ),
+            Equals(
+              FunctionApplication(lastContainsN, Seq(pathTerm)),
+              strTerm
+            )
           ),
           Equals(count.id, SNumeral(1)),
           Equals(count.id, SNumeral(0))
