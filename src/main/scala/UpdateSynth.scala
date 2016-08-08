@@ -106,93 +106,120 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
   eval(Assert(Not("error".id)))
 
   // Generate Parent function.
-  eval(DeclareFun(SSymbol("parent"), Seq(pathSort), pathSort))
-  for (path <- paths) {
-    eval(Assert(
-      Equals(
-        FunctionApplication("parent".id, Seq(PlusHelpers.stringifyPath(path).id)),
-        Option(path.getParent) match {
-          case Some(parent) => PlusHelpers.stringifyPath(parent).id
-          case None => "NoPath".id
-        }
-      )
-    ))
+  val parentTuples = paths.map { path => 
+    Option(path.getParent).map {
+      parent => (PlusHelpers.stringifyPath(path).id, PlusHelpers.stringifyPath(parent).id)
+    }
+  }.flatten
+
+  val parentBody = parentTuples.foldRight[Term]("NoPath".id) { case ((path, parent), acc) =>
+    ITE(Equals("p".id, path), parent, acc)
   }
+
+  eval(DefineFun(FunDef(SSymbol("parent"), Seq(SortedVar(SSymbol("p"), pathSort)), 
+    pathSort, parentBody
+  )))
 
   // Generate path concatenation function.
   val concatPaths = "cat-paths".id
-  eval(DeclareFun(SSymbol("cat-paths"), Seq(pathSort, pathSort), pathSort))
-  for (p1 <- paths; p2 <- paths) {
-    if (paths.contains(p1 concat p2)) {
-      eval(Assert(
-        Equals(
-          FunctionApplication(concatPaths, Seq(
-            PlusHelpers.stringifyPath(p1).id, PlusHelpers.stringifyPath(p2).id
-          )),
-          PlusHelpers.stringifyPath(p1 concat p2).id
-        )
-      ))
-    } else {
-      eval(Assert(
-        Equals(
-          FunctionApplication(concatPaths, Seq(
-            PlusHelpers.stringifyPath(p1).id, PlusHelpers.stringifyPath(p2).id
-          )),
-          "NoPath".id
-        )
-      ))
+
+  val pathTuples = for (p1 <- paths; p2 <- paths; if paths.contains(p1 concat p2)) yield (p1, p2)
+  
+  val concatPathBody = 
+    pathTuples.foldRight[Term]("NoPath".id) { case ((p1, p2), acc) => 
+      ITE(
+        And(
+          Equals("p1".id, PlusHelpers.stringifyPath(p1).id),
+          Equals("p2".id, PlusHelpers.stringifyPath(p2).id)
+        ),
+        PlusHelpers.stringifyPath(p1 concat p2).id,
+        acc
+      )
     }
-  }
+
+  eval(DefineFun(FunDef(
+    SSymbol("cat-paths"), Seq(SortedVar(SSymbol("p1"), pathSort), SortedVar(SSymbol("p2"), pathSort)), 
+    pathSort, concatPathBody
+  )))
 
   // Generate string concatenation function.
   val concatStrings = "cat-strings".id
-  eval(DeclareFun(SSymbol("cat-strings"), Seq(stringSort, stringSort), stringSort))
-  for (s1 <- strings; s2 <- strings) {
-    if (strings.contains(s1 + s2)) {
-      eval(Assert(
-        Equals(
-          FunctionApplication(concatStrings, Seq(strMap.rep(s1).id, strMap.rep(s2).id)),
-          strMap.rep(s1 + s2).id
-        )
-      ))
-    } else {
-      eval(Assert(
-        Equals(
-          FunctionApplication(concatStrings, Seq(strMap.rep(s1).id, strMap.rep(s2).id)),
-          "NoString".id
-        )
-      ))
+
+  val stringTuples = for (p1 <- strings; p2 <- strings; if paths.contains(p1 + p2)) yield (p1, p2)
+
+  val concatStringBody = 
+    stringTuples.foldRight[Term]("NoString".id) { case ((s1, s2), acc) => 
+      ITE(
+        And(
+          Equals("s1".id, strMap.rep(s1).id),
+          Equals("s2".id, strMap.rep(s2).id)
+        ),
+        strMap.rep(s1 + s2).id,
+        acc
+      )
     }
-  }
+  eval(DefineFun(FunDef(
+    SSymbol("cat-strings"), Seq(SortedVar(SSymbol("s1"), stringSort), SortedVar(SSymbol("s2"), stringSort)),
+    stringSort, concatStringBody
+  )))
 
   // Generate initial state function (state1?)
   val initialState = FunName("state", 1)
-  eval(DeclareFun(initialState.sym, Seq(pathSort), stateSort))
 
-  eval(Assert(Equals(FunctionApplication(initialState.id, Seq("NoPath".id)), "Null".id)))
-  for (path <- paths) {
-    eval(Assert(
-      Equals(
-        FunctionApplication(initialState.id, Seq(PlusHelpers.stringifyPath(path).id)),
-        defaultFS.get(path).map(convertFileState(_)).getOrElse("Null".id)
-      )
-    ))
+  val initialStateTuples = paths.map { path => 
+    defaultFS.get(path).map(convertFileState).map(state => (path, state))
+  }.flatten
+
+  val initialStateBody = initialStateTuples.foldRight[Term]("Null".id) { case ((path, state), acc) =>
+    ITE(
+      Equals("p".id, PlusHelpers.stringifyPath(path).id),
+      state,
+      acc
+    )
   }
+
+  eval(DefineFun(FunDef(
+    initialState.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stateSort,
+    initialStateBody
+  )))
 
   // Generate initial contains function (contains1?)
   val initialContains = FunName("contains", 1)
-  eval(DeclareFun(initialContains.sym, Seq(pathSort), stringSort))
-  for (path <- paths) {
-    eval(Assert(
-      Equals(
-        FunctionApplication(initialContains.id, Seq(PlusHelpers.stringifyPath(path).id)),
-        defaultFS.get(path).map {
-          case IsFile(str) => strMap.rep(str).id
-          case _ => strMap.rep("").id
-        }.getOrElse(strMap.rep("").id)
+
+  val initialContainsTuples = paths.map { path =>
+    defaultFS.get(path).flatMap {
+      case IsFile(str) => Some((PlusHelpers.stringifyPath(path).id, strMap.rep(str).id))
+      case _ => None
+    } 
+  }.flatten
+
+  val initialContainsBody = initialContainsTuples.foldRight[Term]("NoString".id) {
+    case ((path, str), acc) => {
+      ITE(
+        Equals("p".id, path),
+        str,
+        acc
       )
-    ))
+    }
   }
+
+  eval(DefineFun(FunDef(
+    initialContains.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stringSort,
+    initialContainsBody
+  )))
+
+  // eval(DeclareFun(initialContains.sym, Seq(pathSort), stringSort))
+  // for (path <- paths) {
+  //   eval(Assert(
+  //     Equals(
+  //       FunctionApplication(initialContains.id, Seq(PlusHelpers.stringifyPath(path).id)),
+  //       defaultFS.get(path).map {
+  //         case IsFile(str) => strMap.rep(str).id
+  //         case _ => strMap.rep("").id
+  //       }.getOrElse(strMap.rep("").id)
+  //     )
+  //   ))
+  // }
 
   // Hole-tracking utilities
   var holes: Map[Int, Term] = Map()
