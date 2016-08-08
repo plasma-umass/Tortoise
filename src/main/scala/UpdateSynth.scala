@@ -106,7 +106,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
   eval(Assert(Not("error".id)))
 
   // Generate Parent function.
-  val parentTuples = paths.map { path => 
+  val parentTuples = paths.map { path =>
     Option(path.getParent).map {
       parent => (PlusHelpers.stringifyPath(path).id, PlusHelpers.stringifyPath(parent).id)
     }
@@ -116,7 +116,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
     ITE(Equals("p".id, path), parent, acc)
   }
 
-  eval(DefineFun(FunDef(SSymbol("parent"), Seq(SortedVar(SSymbol("p"), pathSort)), 
+  eval(DefineFun(FunDef(SSymbol("parent"), Seq(SortedVar(SSymbol("p"), pathSort)),
     pathSort, parentBody
   )))
 
@@ -124,9 +124,9 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
   val concatPaths = "cat-paths".id
 
   val pathTuples = for (p1 <- paths; p2 <- paths; if paths.contains(p1 concat p2)) yield (p1, p2)
-  
-  val concatPathBody = 
-    pathTuples.foldRight[Term]("NoPath".id) { case ((p1, p2), acc) => 
+
+  val concatPathBody =
+    pathTuples.foldRight[Term]("NoPath".id) { case ((p1, p2), acc) =>
       ITE(
         And(
           Equals("p1".id, PlusHelpers.stringifyPath(p1).id),
@@ -138,7 +138,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
     }
 
   eval(DefineFun(FunDef(
-    SSymbol("cat-paths"), Seq(SortedVar(SSymbol("p1"), pathSort), SortedVar(SSymbol("p2"), pathSort)), 
+    SSymbol("cat-paths"), Seq(SortedVar(SSymbol("p1"), pathSort), SortedVar(SSymbol("p2"), pathSort)),
     pathSort, concatPathBody
   )))
 
@@ -147,8 +147,8 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
 
   val stringTuples = for (p1 <- strings; p2 <- strings; if paths.contains(p1 + p2)) yield (p1, p2)
 
-  val concatStringBody = 
-    stringTuples.foldRight[Term]("NoString".id) { case ((s1, s2), acc) => 
+  val concatStringBody =
+    stringTuples.foldRight[Term]("NoString".id) { case ((s1, s2), acc) =>
       ITE(
         And(
           Equals("s1".id, strMap.rep(s1).id),
@@ -166,7 +166,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
   // Generate initial state function (state1?)
   val initialState = FunName("state", 1)
 
-  val initialStateTuples = paths.map { path => 
+  val initialStateTuples = paths.map { path =>
     defaultFS.get(path).map(convertFileState).map(state => (path, state))
   }.flatten
 
@@ -190,7 +190,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
     defaultFS.get(path).flatMap {
       case IsFile(str) => Some((PlusHelpers.stringifyPath(path).id, strMap.rep(str).id))
       case _ => None
-    } 
+    }
   }.flatten
 
   val initialContainsBody = initialContainsTuples.foldRight[Term]("NoString".id) {
@@ -208,23 +208,11 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
     initialContainsBody
   )))
 
-  // eval(DeclareFun(initialContains.sym, Seq(pathSort), stringSort))
-  // for (path <- paths) {
-  //   eval(Assert(
-  //     Equals(
-  //       FunctionApplication(initialContains.id, Seq(PlusHelpers.stringifyPath(path).id)),
-  //       defaultFS.get(path).map {
-  //         case IsFile(str) => strMap.rep(str).id
-  //         case _ => strMap.rep("").id
-  //       }.getOrElse(strMap.rep("").id)
-  //     )
-  //   ))
-  // }
-
   // Hole-tracking utilities
   var holes: Map[Int, Term] = Map()
   def mkHole(loc: Int, typ: Type): Term = holes.get(loc) match {
-    case _ if loc < 0 => {
+    case Some(term) => term
+    case None if loc < 0 => {
       val fresh = freshName(s"not-present$loc@")
       val sort = typ match {
         case TPath => pathSort
@@ -236,9 +224,9 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
       }
       // This is actually a constant declaration.
       eval(DefineFun(FunDef(fresh, Seq(), sort, value)))
+      holes += (loc -> fresh.id)
       fresh.id
     }
-    case Some(term) => term
     case None => {
       val hole = freshName(s"loc-$loc@")
       eval(DeclareConst(hole, typ match {
