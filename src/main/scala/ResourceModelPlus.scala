@@ -4,6 +4,7 @@ import java.nio.file.Paths
 import scalaj.http.Http
 import rehearsal.FSPlusSyntax._
 import rehearsal.Implicits._
+import rehearsal.PlusHelpers.NotPresentMap
 
 object ResourceModelPlus {
   sealed trait Content
@@ -57,23 +58,32 @@ object ResourceModelPlus {
   implicit class InterpMap(map: Map[String, Seq[String]]) {
     def toFSPlus(str: String, locMap: Map[String, Int]): Expr = map.get(str) match {
       case Some(terms) => {
-        val fsTerms: Seq[Expr] = terms.map(str => EString(CString(str, locMap(str))))
+        val fsTerms: Seq[Expr] = terms.map(str => EString(cstr(str, locMap(str))))
         fsTerms.reduce {
           (leftTerm, rightTerm) => EConcat(leftTerm, rightTerm)
         }
       }
-      case None => EString(CString(str, locMap.getOrElse(str, -1)))
+      case None => EString(cstr(str, locMap.getOrElse(str, -1)))
     }
 
     def toFSPlus(path: Path, locMap: Map[String, Int]): Expr = map.get(path.toString) match {
       case Some(terms) => {
-        val fsTerms: Seq[Expr] = terms.map(str => EPath(CPath(JavaPath(str), locMap(str))))
+        val fsTerms: Seq[Expr] = terms.map(str => EPath(cpath(JavaPath(str), locMap(str))))
         fsTerms.reduce {
           (leftTerm, rightTerm) => EConcat(leftTerm, rightTerm)
         }
       }
-      case None => EPath(CPath(JavaPath(path), locMap.getOrElse(path.toString, -1)))
+      case None => EPath(cpath(JavaPath(path), locMap.getOrElse(path.toString, -1)))
     }
+  }
+
+  def cpath(p: LangPath, loc: Int): Const = check(CPath(p, loc))
+  def cstr(s: String, loc: Int): Const = check(CString(s, loc))
+
+  def check(const: Const): Const = const match {
+    case CPath(p, -1) => CPath(p, NotPresentMap.fresh(const))
+    case CString(s, -1) => CString(s, NotPresentMap.fresh(const))
+    case _ => const
   }
 
   def compile(
@@ -83,13 +93,13 @@ object ResourceModelPlus {
     case EnsureFile(p, CInline(c)) => {
       SLet("path", interpMap.toFSPlus(p, locMap),
         ite(PTestFileState(EId("path"), IsFile("")), rm(EId("path")), SSkip) >>
-        mkfile(EId("path"), EString(CString(c, locMap(c))))
+        mkfile(EId("path"), EString(cstr(c, locMap(c))))
       )
     }
 
     case EnsureFile(p, CFile(s)) => {
       SLet("path", interpMap.toFSPlus(p, locMap),
-        SLet("srcPath", EPath(CPath(JavaPath(Paths.get(s)), locMap(s))),
+        SLet("srcPath", EPath(cpath(JavaPath(Paths.get(s)), locMap(s))),
           ite(PTestFileState(EId("path"), IsFile("")), rm(EId("path")), SSkip) >>
           cp(EId("srcPath"), EId("path"))
         )
@@ -98,7 +108,7 @@ object ResourceModelPlus {
 
     case File(p, CInline(c), false) => {
       SLet("path", interpMap.toFSPlus(p, locMap),
-        SLet("content", EString(CString(c, locMap(c))),
+        SLet("content", EString(cstr(c, locMap(c))),
           ite(PTestFileState(EId("path"), IsFile("")),
             rm(EId("path")) >> mkfile(EId("path"), EId("content")),
             ite(PTestFileState(EId("path"), DoesNotExist),
@@ -116,7 +126,7 @@ object ResourceModelPlus {
     }
 
     case File(p, CFile(s), false) => {
-      SLet("srcPath", EPath(CPath(JavaPath(Paths.get(s)), locMap(s))),
+      SLet("srcPath", EPath(cpath(JavaPath(Paths.get(s)), locMap(s))),
         SLet("dstPath", interpMap.toFSPlus(p, locMap),
           ite(PTestFileState(EId("dstPath"), IsFile("")),
             rm(EId("dstPath")) >> cp(EId("srcPath"), EId("dstPath")),
@@ -130,7 +140,7 @@ object ResourceModelPlus {
     }
 
     case File(p, CFile(s), true) => {
-      SLet("srcPath", EPath(CPath(JavaPath(Paths.get(s)), locMap(s))),
+      SLet("srcPath", EPath(cpath(JavaPath(Paths.get(s)), locMap(s))),
         SLet("dstPath", interpMap.toFSPlus(p, locMap),
           ite(PTestFileState(EId("dstPath"), IsDir) || PTestFileState(EId("dstPath"), IsFile("")),
             rm(EId("dstPath")),
@@ -176,9 +186,9 @@ object ResourceModelPlus {
       val (ul, gl, hl, sl) = (-1, -1, -1, locMap(sub))
       val subPath = JavaPath(sub)
 
-      SLet("userPath", EConcat(EPath(CPath(JavaPath(uRoot), ul)), EPath(CPath(subPath, sl))),
-        SLet("groupPath", EConcat(EPath(CPath(JavaPath(gRoot), gl)), EPath(CPath(subPath, sl))),
-          SLet("homePath", EConcat(EPath(CPath(JavaPath(hRoot), hl)), EPath(CPath(subPath, sl))),
+      SLet("userPath", EConcat(EPath(cpath(JavaPath(uRoot), ul)), EPath(cpath(subPath, sl))),
+        SLet("groupPath", EConcat(EPath(cpath(JavaPath(gRoot), gl)), EPath(cpath(subPath, sl))),
+          SLet("homePath", EConcat(EPath(cpath(JavaPath(hRoot), hl)), EPath(cpath(subPath, sl))),
             if (present) {
               val homeCmd = if (manageHome) {
                 ite(PTestFileState(h, DoesNotExist), mkdir(h), SSkip)
@@ -207,7 +217,7 @@ object ResourceModelPlus {
       val (root, sub) = ("/etc/groups", name)
       val (rLoc, sLoc) = (-1, locMap(sub))
 
-      SLet("path", EConcat(EPath(CPath(JavaPath(root), rLoc)), EPath(CPath(JavaPath(sub), sLoc))),
+      SLet("path", EConcat(EPath(cpath(JavaPath(root), rLoc)), EPath(cpath(JavaPath(sub), sLoc))),
         if (present) {
           ite(PTestFileState(EId("path"), DoesNotExist),
             mkdir(EId("path")),
@@ -238,7 +248,7 @@ object ResourceModelPlus {
 
       val content = "arbitrary content"
       val mkfiles = files.toSeq.map { p =>
-        mkfile(interpMap.toFSPlus(p, locMap), EString(CString(content, -1)))
+        mkfile(interpMap.toFSPlus(p, locMap), EString(cstr(content, -1)))
       }
 
       val stmts = mkdirs ++ mkfiles
@@ -246,10 +256,10 @@ object ResourceModelPlus {
       val (mLoc, sLoc) = (-1, locMap(sub))
 
       // apt does not remove pre-existing conflicting files.
-      SLet("path", EConcat(EPath(CPath(JavaPath(main), mLoc)), EPath(CPath(JavaPath(sub), sLoc))),
+      SLet("path", EConcat(EPath(cpath(JavaPath(main), mLoc)), EPath(cpath(JavaPath(sub), sLoc))),
         ite(PTestFileState(EId("path"), IsFile("")),
           SSkip,
-          mkfile(EId("path"), EString(CString(content, -1))) >> seq(stmts: _*)
+          mkfile(EId("path"), EString(cstr(content, -1))) >> seq(stmts: _*)
         )
       )
     }
@@ -268,7 +278,7 @@ object ResourceModelPlus {
       val (root, sub) = ("/packages/", name)
       val (rLoc, sLoc) = (-1, locMap(sub))
 
-      SLet("path", EConcat(EPath(CPath(JavaPath(root), rLoc)), EPath(CPath(JavaPath(sub), sLoc))),
+      SLet("path", EConcat(EPath(cpath(JavaPath(root), rLoc)), EPath(cpath(JavaPath(sub), sLoc))),
         ite(PTestFileState(EId("path"), DoesNotExist),
           SSkip,
           rm(EId("path")) >> seq(stmts: _*)
@@ -277,12 +287,12 @@ object ResourceModelPlus {
     }
 
     case self@SshAuthorizedKey(user, present, _, key) => {
-      SLet("path", EPath(CPath(JavaPath(self.keyPath), locMap(self.keyPath))),
+      SLet("path", EPath(cpath(JavaPath(self.keyPath), locMap(self.keyPath))),
         if (present) {
           ite(PTestFileState(EId("path"), IsFile("")),
             rm(EId("path")),
             SSkip
-          ) >> mkfile(EId("path"), EString(CString(key, locMap(key))))
+          ) >> mkfile(EId("path"), EString(cstr(key, locMap(key))))
         } else {
           ite(PTestFileState(EId("path"), IsFile("")),
             rm(EId("path")),
@@ -293,7 +303,7 @@ object ResourceModelPlus {
     }
 
     case self@Service(name) => {
-      ite(PTestFileState(EPath(CPath(JavaPath(self.path), locMap(self.path))), IsFile("")),
+      ite(PTestFileState(EPath(cpath(JavaPath(self.path), locMap(self.path))), IsFile("")),
         SSkip,
         SError
       )
@@ -305,16 +315,16 @@ object ResourceModelPlus {
       val content = "arbitrary content"
 
       val pathProg = EConcat(
-        EPath(CPath(JavaPath(root), -1)),
+        EPath(cpath(JavaPath(root), -1)),
         EConcat(
-          EPath(CPath(JavaPath("crontab-"), -1)),
-          EPath(CPath(JavaPath(name), locMap(name)))
+          EPath(cpath(JavaPath("crontab-"), -1)),
+          EPath(cpath(JavaPath(name), locMap(name)))
         )
       )
       SLet("path", pathProg,
         if (present) {
           ite(PTestFileState(EId("path"), DoesNotExist),
-            mkfile(EId("path"), EString(CString(content, locMap(content)))),
+            mkfile(EId("path"), EString(cstr(content, locMap(content)))),
             SSkip
           )
         } else {
@@ -334,12 +344,12 @@ object ResourceModelPlus {
         ite(PTestFileState(EId("target"), DoesNotExist),
           SSkip,
           rm(EId("target"))
-        ) >> mkfile(EId("target"), EString(CString(content, locMap(content))))
+        ) >> mkfile(EId("target"), EString(cstr(content, locMap(content))))
       }
 
       val s2 = if (ensure) {
         ite(PTestFileState(EId("path"), DoesNotExist),
-          mkfile(EId("path"), EString(CString(ip, locMap(ip)))),
+          mkfile(EId("path"), EString(cstr(ip, locMap(ip)))),
           SSkip
         )
       } else {
@@ -350,15 +360,15 @@ object ResourceModelPlus {
       }
 
       val pathProg = EConcat(
-        EPath(CPath(JavaPath(root), -1)),
+        EPath(cpath(JavaPath(root), -1)),
         EConcat(
-          EPath(CPath(JavaPath("host-"), -1)),
-          EPath(CPath(JavaPath(name), locMap(name)))
+          EPath(cpath(JavaPath("host-"), -1)),
+          EPath(cpath(JavaPath(name), locMap(name)))
         )
       )
 
       SLet("path", pathProg,
-        SLet("target", EPath(CPath(JavaPath(target), locMap(target))),
+        SLet("target", EPath(cpath(JavaPath(target), locMap(target))),
           s1 >> s2
         )
       )

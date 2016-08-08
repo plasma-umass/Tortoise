@@ -224,12 +224,18 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
   // Hole-tracking utilities
   var holes: Map[Int, Term] = Map()
   def mkHole(loc: Int, typ: Type): Term = holes.get(loc) match {
-    case _ if loc == -1 => {
-      val fresh = freshName("not-present")
-      eval(DeclareConst(fresh, typ match {
+    case _ if loc < 0 => {
+      val fresh = freshName(s"not-present$loc@")
+      val sort = typ match {
         case TPath => pathSort
         case TString => stringSort
-      }))
+      }
+      val value = PlusHelpers.NotPresentMap(loc) match {
+        case FSP.CPath(p, _) => PlusHelpers.stringifyPath(p.path).id
+        case FSP.CString(s, _) => strMap.rep(s).id
+      }
+      // This is actually a constant declaration.
+      eval(DefineFun(FunDef(fresh, Seq(), sort, value)))
       fresh.id
     }
     case Some(term) => term

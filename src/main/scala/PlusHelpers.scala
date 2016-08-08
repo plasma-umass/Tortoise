@@ -335,4 +335,18 @@ private[rehearsal] object PlusHelpers {
 
     def apply(pairs: (String, String)*): StringBiMap = StringBiMap(pairs.toMap)
   }
+
+  object NotPresentMap {
+    private var st: Substitution = Map()
+
+    def fresh(value: Const): Int = {
+      val n = -(st.size + 1)
+      st = st + ((n, value))
+      n
+    }
+
+    def apply(n: Int): Const = st(n)
+
+    def get(n: Int): Option[Const] = st.get(n)
+  }
 }
