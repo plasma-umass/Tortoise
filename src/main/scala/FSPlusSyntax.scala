@@ -124,7 +124,7 @@ object FSPlusSyntax {
       case (SError, _) => SError
       case (_, SError) => SError
       case (SIf(a, SSkip, SError), SIf(b, SSkip, SError)) => ite(a && b, SSkip, SError)
-      case _ => seq(this, s2)
+      case _ => intern(SSeq(p, q))
     }
 
     lazy val (paths, strings) = PlusHelpers.calculateConsts(this)
@@ -152,7 +152,7 @@ object FSPlusSyntax {
     if (p eq q) p else intern(new SIf(a, p, q))
   }
 
-  def seq(p: Statement, q: Statement): Statement = intern(SSeq(p, q))
+  def seq(p: Statement, q: Statement): Statement = p >> q
 
   def seq(stmts: Statement*): Statement = stmts.foldRight[Statement](SSkip) {
     case (stmt, acc) => stmt >> acc
