@@ -124,7 +124,7 @@ object FSPlusSyntax {
       case (SError, _) => SError
       case (_, SError) => SError
       case (SIf(a, SSkip, SError), SIf(b, SSkip, SError)) => ite(a && b, SSkip, SError)
-      case _ => intern(SSeq(p, q))
+      case (p, q) => intern(SSeq(p, q))
     }
 
     lazy val (paths, strings) = PlusHelpers.calculateConsts(this)
