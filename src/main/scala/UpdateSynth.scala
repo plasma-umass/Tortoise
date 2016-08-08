@@ -305,7 +305,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
   }
 
   // Returns the last state function that was defined.
-  def defineFuns(
+  def compile(
     trace: T.Statement, cond: Term, lastFuns: (FunName, FunName), currFuns: (FunName, FunName)
   ): (FunName, FunName) = trace match {
 
@@ -409,8 +409,8 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
     }
 
     case T.SSeq(s1, s2) => {
-      val funPrimes = defineFuns(s1, cond, lastFuns, currFuns)
-      defineFuns(s2, cond, funPrimes, (funPrimes._1.next, funPrimes._2.next))
+      val funPrimes = compile(s1, cond, lastFuns, currFuns)
+      compile(s2, cond, funPrimes, (funPrimes._1.next, funPrimes._2.next))
     }
 
     case T.SIf(pred, cons, alt) => {
@@ -420,8 +420,8 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
       val cName = (FunName(currStateFun + "Cons", 1), FunName(currContainsFun + "Cons", 1))
       val aName = (FunName(currStateFun + "Alt", 1), FunName(currContainsFun + "Alt", 1))
 
-      val (consStateFun, consContainsFun) = defineFuns(cons, cond && predTerm, lastFuns, cName)
-      val (altStateFun, altContainsFun) = defineFuns(alt, cond && Not(predTerm), lastFuns, aName)
+      val (consStateFun, consContainsFun) = compile(cons, cond && predTerm, lastFuns, cName)
+      val (altStateFun, altContainsFun) = compile(alt, cond && Not(predTerm), lastFuns, aName)
 
       val stateFun =
         DefineFun(FunDef(currStateFun.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stateSort,
@@ -569,7 +569,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
   def synthesize(trace: T.Statement, cs: Seq[ValueConstraint], soft: Seq[Constraint]) = {
     val initialFuns = (initialState, initialContains)
     val nextFuns = (initialState.next, initialContains.next)
-    val lastFuns = defineFuns(trace, True(), initialFuns, nextFuns)
+    val lastFuns = compile(trace, True(), initialFuns, nextFuns)
     val (lastStateN, lastContainsN) = (lastFuns._1.id, lastFuns._2.id)
 
     // Hard constraints...
