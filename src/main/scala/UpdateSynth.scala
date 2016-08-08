@@ -22,18 +22,20 @@ object UpdateSynth {
   import Implicits._
   import java.nio.file.Paths
 
-  def synthesize(stmt: Statement, cs: Seq[ValueConstraint]): Option[Substitution] = {
-
-    val (paths, strings) = PlusHelpers.calculateConsts(stmt)
+  def synthesize(stmtOriginal: Statement, cs: Seq[ValueConstraint]): Option[Substitution] = {
     val pathCs = cs.filter(_.isInstanceOf[PathConstraint]).map(_.asInstanceOf[PathConstraint])
-    val stringCs = cs.filter(_.isInstanceOf[StringConstraint]).map(_.asInstanceOf[StringConstraint])
+    val strCs = cs.filter(_.isInstanceOf[StringConstraint]).map(_.asInstanceOf[StringConstraint])
     val constraintPaths = {
       pathCs.flatMap(c => Seq(c.path) ++ c.path.ancestors).toSet ++
-      stringCs.flatMap(c => Seq(c.path) ++ c.path.ancestors).toSet
+      strCs.flatMap(c => Seq(c.path) ++ c.path.ancestors).toSet
     }
 
+    val stmt = Pruning.prune(stmtOriginal)(constraintPaths)
+
+    val (paths, strings) = PlusHelpers.calculateConsts(stmt)
+
     val basePaths = constraintPaths ++ paths ++ Settings.assumedDirs
-    val allStrings = stringCs.map(_.contents).toSet ++ Set("") ++ strings
+    val allStrings = strCs.map(_.contents).toSet ++ Set("") ++ strings
 
     val allPaths: Set[Path] = basePaths.flatMap { path =>
         val conts = path.iterator.toList
@@ -52,8 +54,9 @@ object UpdateSynth {
 
     val trace = FSPlusEval.tracingEval(stmt)
     println("Synthesis initiated.")
-    impl.synthesize(trace, cs, soft)
+    val res = impl.synthesize(trace, cs, soft)
     println("Syntheseis complete.")
+    res
   }
 }
 
