@@ -51,8 +51,9 @@ object UpdateSynth {
     val impl = new UpdateSynth(allPaths, allStrings, defaultFS)
 
     val trace = FSPlusEval.tracingEval(stmt)
-    println("Starting synthesis")
+    println("Synthesis initiated.")
     impl.synthesize(trace, cs, soft)
+    println("Syntheseis complete.")
   }
 }
 
@@ -273,7 +274,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
 
   // Returns the last state function that was defined.
   def defineFuns(trace: T.Statement, cond: Term,
-    lastFuns: (FunName, FunName), 
+    lastFuns: (FunName, FunName),
     currFuns: (FunName, FunName)): (FunName, FunName) = trace match {
     case T.SError => {
       eval(Assert(Implies(
@@ -287,7 +288,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
       val pathTerm = convertExpr(path)(lastFuns)
       val (lastStateFun, lastContainsFun) = lastFuns
       val (currStateFun, currContainsFun) = currFuns
-      
+
       val assertNoError =
         Assert(Implies(
           cond,
@@ -311,7 +312,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
           )
         ))
       // Need to do this, otherwise if doesn't work.
-      val containsFun = 
+      val containsFun =
         DefineFun(FunDef(currContainsFun.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stringSort,
           ITE(
             Equals("p".id, pathTerm),
@@ -331,7 +332,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
       val (lastStateFun, lastContainsFun) = lastFuns
       val (currStateFun, currContainsFun) = currFuns
 
-      val assertNoError = 
+      val assertNoError =
         Assert(Implies(
           cond,
           ITE(
@@ -345,7 +346,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
             Equals("error".id, True())
           )
         ))
-      val stateFun = 
+      val stateFun =
         DefineFun(FunDef(currStateFun.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stateSort,
             ITE(
               Equals("p".id, pathTerm),
@@ -353,7 +354,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
               FunctionApplication(lastStateFun.id, Seq("p".id))
             )
         ))
-      val containsFun = 
+      val containsFun =
         DefineFun(FunDef(currContainsFun.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stringSort,
           ITE(
             Equals("p".id, pathTerm),
@@ -381,7 +382,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
       val (consStateFun, consContainsFun) = defineFuns(cons, cond && predTerm, lastFuns, cName)
       val (altStateFun, altContainsFun) = defineFuns(alt, cond && Not(predTerm), lastFuns, aName)
 
-      val stateFun = 
+      val stateFun =
         DefineFun(FunDef(currStateFun.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stateSort,
           ITE(
             predTerm,
@@ -407,7 +408,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
       val (lastStateFun, lastContainsFun) = lastFuns
       val (currStateFun, currContainsFun) = currFuns
 
-      val assertNoError = 
+      val assertNoError =
         Assert(Implies(
           cond,
           ITE(
@@ -427,7 +428,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
             Equals("error".id, True())
           )
         ))
-      val stateFun = 
+      val stateFun =
         DefineFun(FunDef(currStateFun.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stateSort,
           ITE(
             Equals("p".id, pathTerm),
@@ -456,7 +457,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
       val (lastStateFun, lastContainsFun) = lastFuns
       val (currStateFun, currContainsFun) = currFuns
 
-      val assertNoError = 
+      val assertNoError =
         Assert(Implies(
           cond,
           ITE(
@@ -476,15 +477,15 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
             Equals("p".id, dstTerm),
             FunctionApplication(lastStateFun.id, Seq(srcTerm)),
             FunctionApplication(lastStateFun.id, Seq("p".id))
-          )   
+          )
         ))
-      val containsFun = 
+      val containsFun =
         DefineFun(FunDef(currContainsFun.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stringSort,
             ITE(
               Equals("p".id, dstTerm),
               FunctionApplication(lastContainsFun.id, Seq(srcTerm)),
               FunctionApplication(lastContainsFun.id, Seq("p".id))
-            )   
+            )
         ))
 
       eval(assertNoError)
