@@ -75,7 +75,9 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
 
   // Generate Path datatype.
   val pathSort = Sort(SimpleIdentifier(SSymbol("Path")))
-  val pathCtrs = paths.toSeq.map(path => Constructor(SSymbol(PlusHelpers.stringifyPath(path)), Seq()))
+  val pathCtrs = paths.toSeq.map(path => Constructor(
+    SSymbol(PlusHelpers.stringifyPath(path)), Seq()
+  ))
   val noPathCtr = Constructor(SSymbol("NoPath"), Seq())
   eval(DeclareDatatypes(Seq(
     SSymbol("Path") -> (noPathCtr +: pathCtrs)
@@ -276,9 +278,10 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
   }
 
   // Returns the last state function that was defined.
-  def defineFuns(trace: T.Statement, cond: Term,
-    lastFuns: (FunName, FunName),
-    currFuns: (FunName, FunName)): (FunName, FunName) = trace match {
+  def defineFuns(
+    trace: T.Statement, cond: Term, lastFuns: (FunName, FunName), currFuns: (FunName, FunName)
+  ): (FunName, FunName) = trace match {
+
     case T.SError => {
       eval(Assert(Implies(
         cond,
@@ -286,7 +289,9 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
       )))
       lastFuns
     }
+
     case T.SSkip => lastFuns
+
     case T.SMkdir(path) => {
       val pathTerm = convertExpr(path)(lastFuns)
       val (lastStateFun, lastContainsFun) = lastFuns
@@ -306,6 +311,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
             Equals("error".id, True())
           )
         ))
+
       val stateFun =
         DefineFun(FunDef(currStateFun.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stateSort,
           ITE(
@@ -314,7 +320,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
             FunctionApplication(lastStateFun.id, Seq("p".id))
           )
         ))
-      // Need to do this, otherwise if doesn't work.
+
       val containsFun =
         DefineFun(FunDef(currContainsFun.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stringSort,
           ITE(
@@ -329,6 +335,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
       eval(stateFun)
       currFuns
     }
+
     case T.SCreateFile(path, cnts) => {
       val pathTerm = convertExpr(path)(lastFuns)
       val contentsTerm = convertExpr(cnts)(lastFuns)
@@ -349,6 +356,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
             Equals("error".id, True())
           )
         ))
+
       val stateFun =
         DefineFun(FunDef(currStateFun.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stateSort,
             ITE(
@@ -357,6 +365,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
               FunctionApplication(lastStateFun.id, Seq("p".id))
             )
         ))
+
       val containsFun =
         DefineFun(FunDef(currContainsFun.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stringSort,
           ITE(
@@ -371,10 +380,12 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
       eval(containsFun)
       currFuns
     }
+
     case T.SSeq(s1, s2) => {
       val funPrimes = defineFuns(s1, cond, lastFuns, currFuns)
       defineFuns(s2, cond, funPrimes, (funPrimes._1.next, funPrimes._2.next))
     }
+
     case T.SIf(pred, cons, alt) => {
       val predTerm = convertPred(pred)(lastFuns)
       val (currStateFun, currContainsFun) = currFuns
@@ -393,6 +404,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
             FunctionApplication(altStateFun.id, Seq("p".id))
           )
         ))
+
       val containsFun =
         DefineFun(FunDef(currContainsFun.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stringSort,
           ITE(
@@ -406,6 +418,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
       eval(containsFun)
       currFuns
     }
+
     case T.SRm(path) => {
       val pathTerm = convertExpr(path)(lastFuns)
       val (lastStateFun, lastContainsFun) = lastFuns
@@ -431,6 +444,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
             Equals("error".id, True())
           )
         ))
+
       val stateFun =
         DefineFun(FunDef(currStateFun.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stateSort,
           ITE(
@@ -454,6 +468,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
       eval(stateFun)
       currFuns
     }
+
     case T.SCp(p1, p2) => {
       val srcTerm = convertExpr(p1)(lastFuns)
       val dstTerm = convertExpr(p2)(lastFuns)
@@ -472,8 +487,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
             Equals("error".id, True())
           )
         ))
-      // FIXME(rachit): I think these semantics are wrong. Once the copy operation is complete,
-      // there is no relation between src and dst
+
       val stateFun =
         DefineFun(FunDef(currStateFun.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stateSort,
           ITE(
@@ -482,6 +496,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
             FunctionApplication(lastStateFun.id, Seq("p".id))
           )
         ))
+
       val containsFun =
         DefineFun(FunDef(currContainsFun.sym, Seq(SortedVar(SSymbol("p"), pathSort)), stringSort,
             ITE(
