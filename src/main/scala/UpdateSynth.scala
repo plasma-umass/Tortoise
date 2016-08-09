@@ -352,8 +352,8 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
         ))
 
       eval(assertNoError)
-      eval(containsFun)
       eval(stateFun)
+      eval(containsFun)
       currFuns
     }
 
@@ -485,8 +485,8 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
         ))
 
       eval(assertNoError)
-      eval(containsFun)
       eval(stateFun)
+      eval(containsFun)
       currFuns
     }
 
@@ -528,8 +528,8 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
         ))
 
       eval(assertNoError)
-      eval(containsFun)
       eval(stateFun)
+      eval(containsFun)
       currFuns
     }
   }
