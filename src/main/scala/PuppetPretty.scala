@@ -63,16 +63,16 @@ private object PuppetPretty extends PrettyPrinter {
   }
 
   sealed trait EContext
-  case object EKeywordContext extends EContext
   case object ENotContext extends EContext
   case object EAndContext extends EContext
   case object EOrContext extends EContext
 
   def prettyExpr(exp: Expr)(implicit cnxt: EContext): Doc = exp match {
     case EUndef => "undef"
-    case EStr(s) => cnxt match {
-      case EKeywordContext => s
-      case _ => dquotes(s)
+    case EStr(s) => if (exp.isKeyword()) {
+      s
+    } else {
+      dquotes(s)
     }
     case EStrInterp(terms) => dquotes(fillcat(terms.map {
       case EVar(id) => dollar <> braces(id)
@@ -108,7 +108,7 @@ private object PuppetPretty extends PrettyPrinter {
       "if" <+> prettyExpr(test) <+> scope(prettyExpr(t)) <+>
       "else" <+> scope(prettyExpr(f))
     }
-    case EResourceRef(typ, title) => typ <+> brackets(prettyExpr(title))
+    case EResourceRef(typ, title) => typ <> brackets(prettyExpr(title))
   }
 
   def prettyRExpr(re: RExpr)(implicit cnxt: EContext): Doc = re match {
@@ -134,7 +134,7 @@ private object PuppetPretty extends PrettyPrinter {
 
   def prettyAttr(attr: Attribute): Doc = {
     implicit val cnxt = ENotContext
-    prettyExpr(attr.name)(EKeywordContext) <+> "=>" <+> prettyExpr(attr.value)
+    prettyExpr(attr.name) <+> "=>" <+> prettyExpr(attr.value)
   }
 
   def prettyArg(arg: Argument): Doc = {

@@ -76,6 +76,15 @@ object PuppetSyntax extends com.typesafe.scalalogging.LazyLogging {
   sealed trait Expr extends Positional {
     def value[T](implicit extractor: Extractor[Expr, T]) = extractor(this)
 
+    var keyword: Boolean = false
+
+    def setKeyword(): Expr = {
+      keyword = true
+      this
+    }
+
+    def isKeyword(): Boolean = keyword
+
     var currLoc: Option[Int] = None
 
     def setLoc(loc: Int): Expr = {

@@ -134,7 +134,7 @@ private class PuppetParser extends RegexParsers with PackratParsers {
   }
 
   //Attribute
-  lazy val attrId: P[Expr] = id ^^ (interpolateString(_))
+  lazy val attrId: P[Expr] = id ^^ (interpolateString(_).setKeyword())
   lazy val attribute: P[Attribute] =
     (attrId | vari) ~ ("=>" ~> (expr | attrId)) ^^ { case name ~ value => Attribute(name, value) }
 
