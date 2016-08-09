@@ -30,7 +30,7 @@ object UpdateSynth {
       strCs.flatMap(c => Seq(c.path) ++ c.path.ancestors).toSet
     }
 
-    val stmt = Pruning.prune(stmtOriginal)(constraintPaths)
+    val stmt = stmtOriginal // Pruning.prune(stmtOriginal)(constraintPaths)
 
     val (paths, strings) = PlusHelpers.calculateConsts(stmt)
 
