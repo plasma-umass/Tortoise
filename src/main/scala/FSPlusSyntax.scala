@@ -62,7 +62,7 @@ object FSPlusSyntax {
     def pretty: String = prettyPred(this)
     override def toString: String = this.pretty
 
-    def &&(b: Pred): Pred = (this, b) match {
+    def &&(b: => Pred): Pred = (this, b) match {
       case (PTrue, _) => b
       case (_, PTrue) => this
       case (PFalse, _) => PFalse
@@ -70,7 +70,7 @@ object FSPlusSyntax {
       case _ => internPred(PAnd(this, b))
     }
 
-    def ||(b: Pred): Pred = (this, b) match {
+    def ||(b: => Pred): Pred = (this, b) match {
       case (PTrue, _) => PTrue
       case (PFalse, _) => b
       case (_, PTrue) => PTrue
@@ -148,7 +148,7 @@ object FSPlusSyntax {
 
   private def intern(e: Statement): Statement = stmtCache.getOrElseUpdate(e, e)
 
-  def ite(pred: Pred, p: Statement, q: Statement): Statement = {
+  def ite(pred: Pred, p: => Statement, q: => Statement): Statement = {
     pred match {
       case PTrue => intern(p)
       case PFalse => intern(q)
