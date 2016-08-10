@@ -148,8 +148,12 @@ object FSPlusSyntax {
 
   private def intern(e: Statement): Statement = stmtCache.getOrElseUpdate(e, e)
 
-  def ite(a: Pred, p: Statement, q: Statement): Statement = {
-    if (p eq q) p else intern(new SIf(a, p, q))
+  def ite(pred: Pred, p: Statement, q: Statement): Statement = {
+    pred match {
+      case PTrue => intern(p)
+      case PFalse => intern(q)
+      case _ => if (p eq q) p else intern(new SIf(pred, p, q))
+    }
   }
 
   def seq(p: Statement, q: Statement): Statement = p >> q
