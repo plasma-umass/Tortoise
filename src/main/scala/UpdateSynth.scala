@@ -247,10 +247,6 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
     def id: QualifiedIdentifier = s"$this".id
     def sym: SSymbol = SSymbol(s"$this")
     def next: FunName = FunName(name, num + 1)
-    def last: FunName = {
-      if (num == 0) throw new RuntimeException(s"No last FunName for $this")
-      else FunName(name, num - 1)
-    }
   }
 
   def convertPred(pred: T.Pred)(implicit fs: (FunName, FunName)): Term = pred match {
