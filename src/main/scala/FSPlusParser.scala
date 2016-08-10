@@ -3,6 +3,7 @@ package rehearsal
 import scala.util.parsing.combinator._
 import java.nio.file.Paths
 import FSPlusSyntax._
+import PlusHelpers.NotPresentMap
 
 private class FSPlusParser extends RegexParsers with PackratParsers {
   type P[T] = PackratParser[T]
@@ -46,15 +47,20 @@ private class FSPlusParser extends RegexParsers with PackratParsers {
   lazy val location: P[Int] = "[" ~> num <~ "]"
 
   lazy val path: P[Const] =
-    angleQuotedText ~ opt(location) ^^ {
-      case path ~ Some(loc) => CPath(JavaPath(Paths.get(path)), loc)
-      case path ~ None => CPath(JavaPath(Paths.get(path)), freshLoc())
+    opt("!") ~ angleQuotedText ~ opt(location) ^^ {
+      case Some(_) ~ path ~ _ => {
+        val p = JavaPath(Paths.get(path))
+        CPath(p, NotPresentMap.fresh(CPath(p, -1)))
+      }
+      case None ~ path ~ Some(loc) => CPath(JavaPath(Paths.get(path)), loc)
+      case None ~ path ~ None => CPath(JavaPath(Paths.get(path)), freshLoc())
     }
 
   lazy val str: P[Const] =
-    quotedText ~ opt(location) ^^ {
-      case str ~ Some(loc) => CString(str, loc)
-      case str ~ None => CString(str, freshLoc())
+    opt("!") ~ quotedText ~ opt(location) ^^ {
+      case Some(_) ~ str ~ _ => CString(str, NotPresentMap.fresh(CString(str, -1)))
+      case None ~ str ~ Some(loc) => CString(str, loc)
+      case None ~ str ~ None => CString(str, freshLoc())
     }
 
   lazy val exprBase: P[Expr] =
