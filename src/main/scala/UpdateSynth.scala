@@ -274,7 +274,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
   def convertExpr(expr: T.Expr)(implicit fs: (FunName, FunName)): Term = {
 
     def convert(expr: T.Expr): (Term, T.Type) = expr match {
-      case T.EHole(typ, loc) => (mkHole(loc, typ), typ)
+      case T.EHole(typ, loc, _) => (mkHole(loc, typ), typ)
       case T.EParent(e) => (FunctionApplication("parent".id, Seq(convert(e)._1)), T.TPath)
       case T.EConcat(lhs, rhs) => (convert(lhs), convert(rhs)) match {
         case ((lhs, T.TPath), (rhs, T.TPath)) => (FunctionApplication(

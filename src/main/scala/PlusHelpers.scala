@@ -339,6 +339,8 @@ private[rehearsal] object PlusHelpers {
   object NotPresentMap {
     private var st: Substitution = Map()
 
+    override def toString = st.toString
+
     def fresh(value: Const): Int = {
       val n = -(st.size + 1)
       st = st + ((n, value))

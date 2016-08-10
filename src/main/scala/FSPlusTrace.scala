@@ -27,7 +27,15 @@ object FSPlusTrace {
     override def toString: String = this.pretty
   }
 
-  case class EHole(typ: Type, loc: Int) extends Expr
+  sealed trait Const {
+    def pretty: String = prettyConst(this)
+    override def toString: String = this.pretty
+  }
+
+  case class CPath(path: LangPath) extends Const
+  case class CString(str: String) extends Const
+
+  case class EHole(typ: Type, loc: Int, org: Const) extends Expr
   case class EParent(e: Expr) extends Expr
   case class EConcat(lhs: Expr, rhs: Expr) extends Expr
   case class EIf(p: Pred, e1: Expr, e2: Expr) extends Expr

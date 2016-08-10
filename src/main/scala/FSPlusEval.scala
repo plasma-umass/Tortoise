@@ -183,8 +183,8 @@ object FSPlusEval {
 
   def tracingEvalExpr(expr: Expr, env: TraceEnv): T.Expr = expr match {
     case EId(id) => lookup(id, env)
-    case EPath(CPath(_, loc)) => T.EHole(T.TPath, loc)
-    case EString(CString(_, loc)) => T.EHole(T.TString, loc)
+    case EPath(CPath(path, loc)) => T.EHole(T.TPath, loc, T.CPath(path))
+    case EString(CString(str, loc)) => T.EHole(T.TString, loc, T.CString(str))
     case EPath(_) | EString(_) => throw MalformedFSPlusException
     case EParent(e) => T.EParent(tracingEvalExpr(e, env))
     case EConcat(lhs, rhs) => T.EConcat(tracingEvalExpr(lhs, env), tracingEvalExpr(rhs, env))

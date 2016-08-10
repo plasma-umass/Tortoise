@@ -10,6 +10,7 @@ object PrettyFSPlusTrace {
   def prettyStmt(stmt: Statement): String = P.layout(P.prettyStmt(stmt))
   def prettyExpr(expr: Expr): String = P.layout(P.prettyExpr(expr))
   def prettyPred(pred: Pred): String = P.layout(P.prettyPred(pred))
+  def prettyConst(const: Const): String = P.layout(P.prettyConst(const))
 }
 
 private object FSPlusTracePretty extends PrettyPrinter {
@@ -31,13 +32,18 @@ private object FSPlusTracePretty extends PrettyPrinter {
   }
 
   def prettyExpr(expr: Expr): Doc = expr match {
-    case EHole(_, loc) => "\u2022" <> brackets(loc.toString)
+    case EHole(_, loc, _) => "\u2022" <> brackets(loc.toString)
     case EParent(e) => "parent" <> parens(prettyExpr(e))
     case EConcat(lhs, rhs) => prettyExpr(lhs) <+> "+" <+> prettyExpr(rhs)
     case EIf(p, e1, e2) => {
       "if" <+> prettyPred(p) <@> "then" <+> indent(prettyExpr(e1)) <@> "else" <+>
       indent(prettyExpr(e2))
     }
+  }
+
+  def prettyConst(const: Const): Doc = const match {
+    case CPath(path) => angles(path.path.toString)
+    case CString(str) => dquotes(str.toString)
   }
 
   sealed trait PredCxt
