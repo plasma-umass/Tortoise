@@ -1,6 +1,6 @@
 [![Build Status](https://magnum.travis-ci.com/plasma-umass/rehearsal.svg?token=qLSQpCbsY9CMXsHZVJDd)](https://magnum.travis-ci.com/plasma-umass/rehearsal)
 
-# Rehearsal: A Configuration Verification Tool for Puppet
+# Pup: Pup updates Puppet
 
 ## Automated Installation with Vagrant.
 
