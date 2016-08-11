@@ -6,17 +6,21 @@ import FSPlusSyntax._
 object PrettyFSPlus {
   import rehearsal.{FSPlusPretty => P}
 
-  def prettyStmt(stmt: Statement): String = P.layout(P.prettyStmt(stmt))
-  def prettyExpr(expr: Expr): String = P.layout(P.prettyExpr(expr))
-  def prettyConst(const: Const): String = P.layout(P.prettyConst(const))
-  def prettyPred(pred: Pred): String = P.layout(P.prettyPred(pred))
+  // Without location labels.
+  def prettyProg(stmt: Statement): String = P.layout(P.prettyStmt(stmt)(false))
+
+  // With location labels.
+  def prettyStmt(stmt: Statement): String = P.layout(P.prettyStmt(stmt)(true))
+  def prettyExpr(expr: Expr): String = P.layout(P.prettyExpr(expr)(true))
+  def prettyConst(const: Const): String = P.layout(P.prettyConst(const)(true))
+  def prettyPred(pred: Pred): String = P.layout(P.prettyPred(pred)(true))
 }
 
 private object FSPlusPretty extends PrettyPrinter {
 
   override val defaultIndent = 0
 
-  def prettyStmt(stmt: Statement): Doc = stmt match {
+  def prettyStmt(stmt: Statement)(implicit showLoc: Boolean): Doc = stmt match {
     case SError => "error"
     case SSkip => "skip"
     case SLet(id, e, b@SLet(_, _, _)) => {
@@ -36,7 +40,7 @@ private object FSPlusPretty extends PrettyPrinter {
     case SCp(src, dst) => "cp" <> parens(prettyExpr(src) <> comma <+> prettyExpr(dst))
   }
 
-  def prettyExpr(expr: Expr): Doc = expr match {
+  def prettyExpr(expr: Expr)(implicit showLoc: Boolean): Doc = expr match {
     case EId(id) => id
     case EPath(path) => prettyConst(path)
     case EString(str) => prettyConst(str)
@@ -48,9 +52,11 @@ private object FSPlusPretty extends PrettyPrinter {
     }
   }
 
-  def prettyConst(const: Const): Doc = const match {
-    case CPath(path, loc) => angles(path.path.toString) <> brackets(loc.toString)
-    case CString(str, loc) => dquotes(str.toString) <> brackets(loc.toString)
+  def prettyConst(const: Const)(implicit showLoc: Boolean): Doc = const match {
+    case CPath(path, loc) if showLoc => angles(path.path.toString) <> brackets(loc.toString)
+    case CPath(path, _) => angles(path.path.toString)
+    case CString(str, loc) if showLoc => dquotes(str.toString) <> brackets(loc.toString)
+    case CString(str, _) => dquotes(str.toString)
   }
 
   sealed trait PredCxt
@@ -58,9 +64,9 @@ private object FSPlusPretty extends PrettyPrinter {
   case object OrCxt extends PredCxt
   case object NotCxt extends PredCxt
 
-  def prettyPred(pred: Pred): Doc = prettyPred(NotCxt, pred)
+  def prettyPred(pred: Pred)(implicit showLoc: Boolean): Doc = prettyPred(NotCxt, pred)
 
-  def prettyPred(cxt: PredCxt, pred: Pred): Doc = pred match {
+  def prettyPred(cxt: PredCxt, pred: Pred)(implicit showLoc: Boolean): Doc = pred match {
     case PTrue => "true"
     case PFalse => "false"
     case PTestFileState(p, st) => prettyFileState(st) <> question <> parens(prettyExpr(p))

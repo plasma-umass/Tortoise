@@ -21,6 +21,11 @@ object Main extends App {
     System.exit(1)
   }
 
+  def pupShell(config: Config): Unit = {
+    val sh = Shell(config.string("filename"))
+    sh.loop()
+  }
+
   def puppetSynthesizer(config: Config): Unit = {
     val fileName = config.string("filename")
     val constraints = FSPlusParser.parseConstraints(config.string("constraints"))
@@ -116,6 +121,11 @@ object Main extends App {
         .action((_, c) => c.copy(command = puppetSynthesizer))
         .text("Synthesize an update to the specified Puppet manifest.")
         .children(string("filename"), string("constraints"))
+
+    cmd("shell")
+      .action((_, c) => c.copy(command = pupShell))
+      .text("Runs a fake shell for updating the specified Puppet manifest.")
+      .children(string("filename"))
   }
 
   parser.parse(args, Config(usage, Map(), Map(), Map())) match {

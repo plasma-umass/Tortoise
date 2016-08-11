@@ -115,6 +115,7 @@ object FSPlusSyntax {
   case class EIf(p: Pred, e1: Expr, e2: Expr) extends Expr
 
   sealed trait Statement {
+    def prog: String = prettyProg(this)
     def pretty: String = prettyStmt(this)
     override def toString: String = this.pretty
 
