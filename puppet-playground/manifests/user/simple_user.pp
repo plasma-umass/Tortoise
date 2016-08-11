@@ -1,0 +1,3 @@
+user{'abc':
+  ensure=>present
+}
