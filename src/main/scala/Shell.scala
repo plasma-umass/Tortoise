@@ -16,24 +16,34 @@ case class Shell(path: String) {
   val prompt = "\u03bb "
 
   def loop(): Unit = {
+    import scala.collection.mutable.Set
+
+    var constraints: Set[ValueConstraint] = Set()
+
     while (true) {
       print(prompt)
       val line = StdIn.readLine()
       val outProg = Try({
+        import SubstitutionPuppet._
+
         val cmd = parseCommand(line)
-        val constraints = calculateConstraints(cmd)
-        val prog = FSPlusParser.parseFile(path)
-        val optSubst = UpdateSynth.synthesize(prog, constraints)
-        optSubst.map(subst => SubstitutionPlus.applySubst(prog)(subst))
+        constraints ++= calculateConstraints(cmd)
+        val manifest = PuppetParser.parseFile(path)
+        PuppetEval.reset()
+        val prog = manifest.eval.resourceGraph.fsGraph("ubuntu-trusty").statement
+        val optSubst = UpdateSynth.synthesize(prog, constraints.toSeq)
+        optSubst.map(subst => applySubst(manifest)(convertSubst(subst)))
       }) match {
-        case Success(Some(stmt)) => {
+        case Success(Some(m)) => {
           println("Successfully synthesized an updated program.")
           val javaPath = Paths.get(path)
-          val content = stmt.prog.getBytes(StandardCharsets.UTF_8)
+          val content = PrettyPuppet.pretty(m).getBytes(StandardCharsets.UTF_8)
           Files.write(javaPath, content, StandardOpenOption.TRUNCATE_EXISTING)
+          constraints = Set()
         }
         case Success(None) => {
           println("An update could not be synthesized given those constraints.")
+          println(s"Constraints: $constraints")
         }
         case Failure(ParseError(msg)) => {
           println("Failed to parse original program:")
@@ -99,13 +109,13 @@ case class Shell(path: String) {
     )
 
     case CUserAdd(name) => Seq(
-      Paths.get(s"/etc/users/$name") -> IsFile("arbitrary content"),    
-      Paths.get(s"/etc/groups/$name") -> IsFile("arbitrary content"),
+      Paths.get(s"/etc/users/$name") -> IsDir,
+      Paths.get(s"/etc/groups/$name") -> IsDir,
       Paths.get(s"/home/$name") -> IsDir
     )
 
     case CUserDel(name) => Seq(
-      Paths.get(s"/etc/users/$name") -> DoesNotExist,    
+      Paths.get(s"/etc/users/$name") -> DoesNotExist,
       Paths.get(s"/etc/groups/$name") -> DoesNotExist,
       Paths.get(s"/home/$name") -> DoesNotExist
     )

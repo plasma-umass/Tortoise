@@ -109,7 +109,11 @@ private[rehearsal] object PuppetEval {
   }
 
   // A hack to implement the defined predicate
-  val definedResources = scala.collection.mutable.Set[Node]()
+  var definedResources = scala.collection.mutable.Set[Node]()
+
+  def reset() {
+    definedResources = scala.collection.mutable.Set[Node]()
+  }
 
   def evalExpr(store: Store, expr: Expr): Expr = expr match {
     case EUndef | ENum(_) | EStr(_) | EBool(_) | ERegex(_) => expr

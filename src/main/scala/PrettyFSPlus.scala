@@ -8,6 +8,7 @@ object PrettyFSPlus {
 
   // Without location labels.
   def prettyProg(stmt: Statement): String = P.layout(P.prettyStmt(stmt)(false))
+  def prettyValueConstraint(c: ValueConstraint): String = P.layout(P.prettyValueConstraint(c))
 
   // With location labels.
   def prettyStmt(stmt: Statement): String = P.layout(P.prettyStmt(stmt)(true))
@@ -96,5 +97,16 @@ private object FSPlusPretty extends PrettyPrinter {
     case IsFile(_) => "file"
     case IsDir => "dir"
     case DoesNotExist => "dne"
+  }
+
+  def prettyFileStateConstraint(st: FileState): Doc = st match {
+    case IsFile(_) => "file"
+    case IsDir => "dir"
+    case DoesNotExist => "null"
+  }
+
+  def prettyValueConstraint(c: ValueConstraint): Doc = c match {
+    case PathConstraint(p, st) => angles(p.toString) <+> "->" <+> prettyFileStateConstraint(st)
+    case StringConstraint(p, cts) => angles(p.toString) <+> "=>" <+> cts
   }
 }

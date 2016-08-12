@@ -10,7 +10,10 @@ object FSPlusSyntax {
 
   sealed trait Constraint
   sealed trait LocationConstraint extends Constraint
-  sealed trait ValueConstraint extends Constraint
+  sealed trait ValueConstraint extends Constraint {
+    def pretty = PrettyFSPlus.prettyValueConstraint(this)
+    override def toString = this.pretty
+  }
 
   case class PathConstraint(path: Path, state: FileState) extends ValueConstraint
   case class StringConstraint(path: Path, contents: String) extends ValueConstraint

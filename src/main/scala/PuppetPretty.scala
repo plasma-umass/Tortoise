@@ -139,14 +139,14 @@ private object PuppetPretty extends PrettyPrinter {
 
   def prettyArg(arg: Argument): Doc = {
     implicit val cnxt = ENotContext
-    arg.id <> optional(arg.default)(e => equal <+> prettyExpr(e))
+    dollar <> arg.id <> optional(arg.default)(e => equal <+> prettyExpr(e))
   }
 
   def prettyResource(res: Resource): Doc = {
     implicit val cnxt = ENotContext
 
     def prettyResPair(pair: (Expr, Seq[Attribute])): Doc =
-      prettyExpr(pair._1) <> colon <@> vsep(pair._2.map(prettyAttr(_)))
+      prettyExpr(pair._1) <> colon <@> vsep(pair._2.map(prettyAttr(_)), comma)
 
     res match {
       case ResourceDecl(typ, resources) => {
