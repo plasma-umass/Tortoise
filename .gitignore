@@ -1,0 +1,29 @@
+# Vagrant specific
+.vagrant
+
+# scala specific
+/project/target
+/target
+/project/project
+
+# Mac OS junk
+.DS_Store
+benchmarks
+
+# emacs files
+[#]*
+.[#]*
+.*
+*~
+
+!.gitignore
+
+# other stuff
+*.dot
+*.log
+
+# Intellij IDEA
+*.ipr
+*.iws
+.idea
+*.iml
