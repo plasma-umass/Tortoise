@@ -13,7 +13,7 @@ case class InvalidCommand(
 ) extends RuntimeException(s"Failed to parse command: $cmd, with arguments: ${args.mkString(" ")}")
 
 case class Shell(path: String) {
-  val prompt = "> "
+  val prompt = "\u03bb "
 
   def loop(): Unit = {
     while (true) {
@@ -59,11 +59,16 @@ case class Shell(path: String) {
   case class CMv(src: String, dst: String) extends Command
   case class CMkdir(path: String) extends Command
   case class CTouch(path: String) extends Command
+  // Assumes that create home directory flag is true.
+  case class CUserAdd(name: String) extends Command
+  case class CUserDel(name: String) extends Command
 
   def parseCommand(str: String): Command = str.split(" ").toSeq match {
     case Seq("mv", src, dst) => CMv(src, dst)
     case Seq("mkdir", path) => CMkdir(path)
     case Seq("touch", path) => CTouch(path)
+    case Seq("useradd", name) => CUserAdd(name)
+    case Seq("userdel", name) => CUserDel(name)
     case cmd +: args => throw InvalidCommand(cmd, args)
     case _ => throw Unreachable
   }
@@ -91,6 +96,18 @@ case class Shell(path: String) {
 
     case CTouch(path) => Seq(
       Paths.get(path) -> IsFile("")
+    )
+
+    case CUserAdd(name) => Seq(
+      Paths.get(s"/etc/users/$name") -> IsFile("arbitrary content"),    
+      Paths.get(s"/etc/groups/$name") -> IsFile("arbitrary content"),
+      Paths.get(s"/home/$name") -> IsDir
+    )
+
+    case CUserDel(name) => Seq(
+      Paths.get(s"/etc/users/$name") -> DoesNotExist,    
+      Paths.get(s"/etc/groups/$name") -> DoesNotExist,
+      Paths.get(s"/home/$name") -> DoesNotExist
     )
   }
 }
