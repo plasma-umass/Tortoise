@@ -1,3 +1,0 @@
-user{'abc':
-  ensure=>present
-}

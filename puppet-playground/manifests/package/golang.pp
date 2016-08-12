@@ -1,3 +1,0 @@
-package { 'golang':
-  ensure => installed
-}
