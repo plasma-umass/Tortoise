@@ -5,6 +5,7 @@
 /project/target
 /target
 /project/project
+/logs
 
 # Mac OS junk
 .DS_Store
