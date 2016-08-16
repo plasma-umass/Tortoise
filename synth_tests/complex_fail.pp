@@ -19,10 +19,5 @@ class vim($user = $title) {
   }
 }
 
-vim {
-  'awe':
-}
-
-vim {
-  'arjun':
-}
+vim { 'arjun': }
+vim { 'awe': }
