@@ -102,8 +102,18 @@ object FSPlusSyntax {
     override def toString: String = this.pretty
   }
 
-  case class CPath(path: LangPath, loc: Int) extends Const
-  case class CString(str: String, loc: Int) extends Const
+  case class CPath(path: LangPath, loc: Int) extends Const {
+    override def equals(that: Any) = that match {
+      case CPath(thatPath, _) => path == thatPath
+      case _ => false
+    }
+  }
+  case class CString(str: String, loc: Int) extends Const {
+    override def equals(that: Any) = that match {
+      case CString(thatStr, _) => str == thatStr
+      case _ => false
+    }
+  }
 
   sealed trait Expr {
     def pretty: String = prettyExpr(this)

@@ -53,9 +53,9 @@ object UpdateSynth {
     val impl = new UpdateSynth(allPaths, allStrings, defaultFS)
 
     val trace = FSPlusEval.tracingEval(stmt)
-    println("Synthesis initiated.")
+    //println("Synthesis initiated.")
     val res = impl.synthesize(trace, cs, soft)
-    println("Syntheseis complete.")
+    //println("Syntheseis complete.")
     res
   }
 }

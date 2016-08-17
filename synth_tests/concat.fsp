@@ -5,4 +5,3 @@ in mkdir(path);
    then mkdir(main);
         mkfile(main + </awe>, "yea")
    else mkdir(main)
-

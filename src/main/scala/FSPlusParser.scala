@@ -92,12 +92,9 @@ private class FSPlusParser extends RegexParsers with PackratParsers {
     stmtAtom
 
   lazy val fileState: P[FileState] =
-    "file" ^^ { _ => IsFile("")   } |
-    "File" ^^ { _ => IsFile("")   } |
-    "dir"  ^^ { _ => IsDir        } |
-    "Dir"  ^^ { _ => IsDir        } |
-    "null" ^^ { _ => DoesNotExist } |
-    "Null" ^^ { _ => DoesNotExist }
+    ("file" | "File") ^^ { _ => IsFile("")   } |
+    ("dir"  | "Dir")  ^^ { _ => IsDir        } |
+    ("null" | "Null") ^^ { _ => DoesNotExist }
 
   lazy val pathConstraint: P[PathConstraint] =
     angleQuotedText ~ ("->" ~> fileState) ^^ {
