@@ -9,7 +9,7 @@ class FSPlusTests extends org.scalatest.FunSuite {
 
 		if(subst.isDefined) {
 			val res = SubstitutionPlus.applySubst(prog)(subst.get)
-			assert(expect == res)
+			assert(res == expect)
 		} else {
 			assert(false, "Synthesis failed")
 		}
@@ -66,7 +66,7 @@ class FSPlusTests extends org.scalatest.FunSuite {
 		makeAssertion(prog, constraints, expect)
 	}
 
-	test("Update multiple paths") {
+	test("Update multiple paths to preserve well-formedness") {
 		val prog = parse("""
 			mkdir(</foo>);
 			mkdir(</bar>);
