@@ -1,4 +1,5 @@
-# Pup: Pup updates Puppet
+# Pup: Pup updates Puppet 
+[![Build Status](https://travis-ci.org/plasma-umass/Pup.svg?branch=master)](https://travis-ci.org/plasma-umass/Pup)
 
 ### Prerequisites
 
