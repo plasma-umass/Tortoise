@@ -40,7 +40,7 @@ object Main extends App {
     }) match {
        case Success(Some(m)) => {
         println("Successfully synthesized an updated program:")
-        println(PrettyPuppet.pretty(m))
+        println(PuppetPretty.pretty(m))
       }
       case Success(None) => {
         println("An update could not be synthesized given those constraints.")

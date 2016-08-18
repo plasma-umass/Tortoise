@@ -3,11 +3,11 @@ package rehearsal
 import org.bitbucket.inkytonik.kiama.output.PrettyPrinter
 import PuppetSyntax._
 
-object PrettyPuppet {
-  def pretty(m: Manifest): String = PuppetPretty.prettyPuppet(m)
+object PuppetPretty {
+  def pretty(m: Manifest): String = PrettyPuppet.prettyPuppet(m)
 }
 
-private object PuppetPretty extends PrettyPrinter {
+private object PrettyPuppet extends PrettyPrinter {
 
   import scala.language.implicitConversions
 

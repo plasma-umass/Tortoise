@@ -37,7 +37,7 @@ case class Shell(path: String) {
         case Success(Some(m)) => {
           println("Successfully synthesized an updated program.")
           val javaPath = Paths.get(path)
-          val content = PrettyPuppet.pretty(m).getBytes(StandardCharsets.UTF_8)
+          val content = PuppetPretty.pretty(m).getBytes(StandardCharsets.UTF_8)
           Files.write(javaPath, content, StandardOpenOption.TRUNCATE_EXISTING)
           constraints = Set()
         }
