@@ -1,6 +1,6 @@
 package rehearsal
 
-private[rehearsal] object PuppetEval {
+object PuppetEval {
 
   import PuppetSyntax._
   import scalax.collection.Graph
