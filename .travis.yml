@@ -11,3 +11,5 @@ cache:
     - /home/travis/.ivy2
     - /home/travis/.sbt
     - /home/travis/mydeps
+notifications:
+  email: false
