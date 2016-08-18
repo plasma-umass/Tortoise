@@ -42,6 +42,8 @@ object PuppetSyntax extends com.typesafe.scalalogging.LazyLogging {
 
   sealed trait Manifest extends Positional {
 
+    override def toString: String = PuppetPretty.pretty(this)
+
     def >>(other: Manifest) = (this, other) match {
       case (MEmpty, _) => other
       case (_, MEmpty) => this
@@ -58,7 +60,7 @@ object PuppetSyntax extends com.typesafe.scalalogging.LazyLogging {
   }
 
   case object MEmpty extends Manifest
-  case class MSeq(m1: Manifest, m2: Manifest) extends Manifest
+  case class MSeq private[PuppetSyntax](m1: Manifest, m2: Manifest) extends Manifest
   case class MResources(resources: Seq[Resource]) extends Manifest
   case class MDefine(name: String, params: Seq[Argument], body: Manifest) extends Manifest
   case class MClass(

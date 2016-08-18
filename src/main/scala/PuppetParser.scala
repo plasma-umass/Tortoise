@@ -96,7 +96,7 @@ private class PuppetParser extends RegexParsers with PackratParsers {
   lazy val prog: P[Manifest] = rep(manifest) ^^ { case exprs => blockExprs(exprs) }
 
   def blockExprs(exprs: Seq[Manifest]): Manifest = {
-    exprs.foldRight[Manifest](MEmpty) { case (m1, m2) => MSeq(m1, m2) }
+    exprs.foldRight[Manifest](MEmpty) { case (m1, m2) => m1 >> m2 }
   }
 
   lazy val cases: P[Seq[Case]] =
