@@ -10,9 +10,9 @@ unzip $ZIPFILE
 mv z3-4.4.1-x64-ubuntu-14.04 z3
 
 DATALOG=datalog.tar.gz
-wget https://sourceforge.net/projects/datalog/files/latest/download
+ls
 mv download $DATALOG
 gunzip $DATALOG
 tar -xvf datalog.tar
-cd datalog-2.6
+cd datalog-2.5
 sudo ./configure && sudo make && sudo make install
