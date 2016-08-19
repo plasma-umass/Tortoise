@@ -49,7 +49,7 @@ object Datalog {
       Parser.parseAll(Parser.facts, results.map(stripPrompt).mkString("\n")) match {
         case Parser.Success(facts, _) => facts
         case Parser.NoSuccess(msg, _) => {
-          println(results)
+          results.map(stripPrompt).foreach(println)
           throw Unexpected(msg.toString)
         }
       }
