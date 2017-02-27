@@ -1,10 +1,10 @@
-package rehearsal
+package pup
 
 import org.bitbucket.inkytonik.kiama.output.PrettyPrinter
 import FSPlusSyntax._
 
 object PrettyFSPlus {
-  import rehearsal.{FSPlusPretty => P}
+  import pup.{FSPlusPretty => P}
 
   // Without location labels.
   def prettyProg(stmt: Statement): String = P.layout(P.prettyStmt(stmt)(false))

@@ -1,4 +1,4 @@
-import rehearsal._
+import pup._
 import Implicits._
 import PuppetSyntax._
 import FSPlusSyntax.{ValueConstraint}
@@ -95,8 +95,8 @@ class SimplePuppetTests extends org.scalatest.FunSuite {
 			  ensure => file,
 			  content => "I am a scrublord."
 			}
-			
-			file { '/awe':
+
+      file { '/awe':
 			  ensure => file,
 			  content => "I am a scrublord."
 			}
@@ -116,8 +116,8 @@ class SimplePuppetTests extends org.scalatest.FunSuite {
 			  ensure => file,
 			  content => "I am 1337 h4xor"
 			}
-			
-			file { '/awe':
+
+      file { '/awe':
 			  ensure => file,
 			  content => "I am a scrublord."
 			}
@@ -137,8 +137,8 @@ class SimplePuppetTests extends org.scalatest.FunSuite {
 			  ensure => file,
 			  content => "I am a scrublord."
 			}
-			
-			file { '/awe':
+
+      file { '/awe':
 			  ensure => file,
 			  content => "I am a scrublord."
 			}
@@ -158,8 +158,8 @@ class SimplePuppetTests extends org.scalatest.FunSuite {
 			  ensure => file,
 			  content => "c4tx0r"
 			}
-			
-			file { '/arjun':
+
+      file { '/arjun':
 			  ensure => file,
 			  content => "I am a scrublord."
 			}
@@ -178,8 +178,8 @@ class SimplePuppetTests extends org.scalatest.FunSuite {
 			file { '/foo':
 			  ensure => directory
 			}
-			
-			file { '/bar':
+
+      file { '/bar':
 			  ensure => directory
 			}
 
@@ -196,8 +196,8 @@ class SimplePuppetTests extends org.scalatest.FunSuite {
 			file { '/arjun':
 			  ensure => directory
 			}
-			
-			file { '/arjun/awe':
+
+      file { '/arjun/awe':
 			  ensure => directory
 			}
 
@@ -212,7 +212,7 @@ class SimplePuppetTests extends org.scalatest.FunSuite {
 	test("Update class instantiation (fails due to path concat generating the wrong string)") {
 		val prog = parse("""
 			class vim($user) {
-			  package { 
+			  package {
 			    'vim':
 			      ensure => present
 			  }
@@ -238,13 +238,13 @@ class SimplePuppetTests extends org.scalatest.FunSuite {
 		""")
 
 		val constraints = parseConstraints("""
-			</home/rachit> -> dir, </etc/users/rachit> -> dir, </etc/groups/rachit> -> dir, 
+			</home/rachit> -> dir, </etc/users/rachit> -> dir, </etc/groups/rachit> -> dir,
 			</home/rachit/.vimrc> -> file
 		""")
 
 		val expect = parse("""
 			class vim($user) {
-			  package { 
+			  package {
 			    'vim':
 			      ensure => present
 			  }
@@ -275,7 +275,7 @@ class SimplePuppetTests extends org.scalatest.FunSuite {
 	test("Update class definition(fails due to path concat generating the wrong string)") {
 		val prog = parse("""
 			class vim($user) {
-			  package { 
+			  package {
 			    'vim':
 			      ensure => present
 			  }
@@ -306,7 +306,7 @@ class SimplePuppetTests extends org.scalatest.FunSuite {
 
 		val expect = parse("""
 			class vim($user) {
-			  package { 
+			  package {
 			    'vim':
 			      ensure => present
 			  }
@@ -336,7 +336,7 @@ class SimplePuppetTests extends org.scalatest.FunSuite {
 
 	test("Update class instantiation with minimum update (useradd + userdel) 1") {
 		val prog = parse("""
-			package { 
+			package {
 			  'vim':
 			    ensure => present
 			}
@@ -368,7 +368,7 @@ class SimplePuppetTests extends org.scalatest.FunSuite {
 		""")
 
 		val expect = parse("""
-			package { 
+			package {
 			  'vim':
 			    ensure => present
 			}
@@ -398,7 +398,7 @@ class SimplePuppetTests extends org.scalatest.FunSuite {
 
 	test("Update class instantiation with minimum update (useradd + userdel) 2") {
 		val prog = parse("""
-			package { 
+			package {
 			  'vim':
 			    ensure => present
 			}
@@ -430,7 +430,7 @@ class SimplePuppetTests extends org.scalatest.FunSuite {
 		""")
 
 		val expect = parse("""
-			package { 
+			package {
 			  'vim':
 			    ensure => present
 			}

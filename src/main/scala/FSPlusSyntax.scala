@@ -1,4 +1,4 @@
-package rehearsal
+package pup
 
 import PrettyFSPlus._
 import Implicits.RichPath

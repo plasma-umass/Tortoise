@@ -1,4 +1,4 @@
-package rehearsal
+package pup
 
 import FSPlusSyntax._
 import Implicits._

@@ -1,7 +1,7 @@
-package rehearsal
+package pup
 
 import FSPlusSyntax._
-import rehearsal.{FSPlusTrace => T}
+import pup.{FSPlusTrace => T}
 
 case class FSPlusEvalError(msg: String) extends RuntimeException(msg)
 case object MalformedFSPlusException extends RuntimeException("Tried to evaluate a malformed FS+ program.")

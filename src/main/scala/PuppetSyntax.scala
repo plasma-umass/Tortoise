@@ -1,4 +1,4 @@
-package rehearsal
+package pup
 
 object PuppetSyntax extends com.typesafe.scalalogging.LazyLogging {
 

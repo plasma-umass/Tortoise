@@ -1,4 +1,4 @@
-package rehearsal
+package pup
 
 trait Extractor[A,B] {
   def apply(from: A): Option[B]

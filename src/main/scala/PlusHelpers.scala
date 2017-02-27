@@ -1,4 +1,4 @@
-package rehearsal
+package pup
 
 import java.nio.file.Paths
 
@@ -8,7 +8,7 @@ import Implicits._
 case object Unreachable extends RuntimeException("This code branch should be unreachable.")
 case class UnboundIdentifier(str: String) extends RuntimeException(s"Unbound Identifier: $str")
 
-private[rehearsal] object PlusHelpers {
+private[pup] object PlusHelpers {
 
   def calculateConsts(stmt: Statement): (Set[Path], Set[String]) = {
     type Result = (Set[Path], Set[String])

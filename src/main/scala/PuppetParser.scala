@@ -1,4 +1,4 @@
-package rehearsal
+package pup
 
 import scala.util.parsing.combinator._
 import PuppetSyntax._

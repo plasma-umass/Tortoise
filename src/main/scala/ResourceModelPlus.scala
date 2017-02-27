@@ -1,10 +1,10 @@
-package rehearsal
+package pup
 
 import java.nio.file.Paths
 import scalaj.http.Http
-import rehearsal.FSPlusSyntax._
-import rehearsal.Implicits._
-import rehearsal.PlusHelpers.NotPresentMap
+import FSPlusSyntax._
+import Implicits._
+import PlusHelpers.NotPresentMap
 
 object ResourceModelPlus {
   sealed trait Content

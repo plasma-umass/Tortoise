@@ -1,4 +1,4 @@
-package rehearsal
+package pup
 
 case class ConfigError(message: String) extends RuntimeException(message)
 
@@ -8,7 +8,7 @@ case class ConfigError(message: String) extends RuntimeException(message)
 object Settings {
 
   import edu.umass.cs.extras.Implicits._
-  import rehearsal.Implicits._
+  import pup.Implicits._
   import config._
   import Config.Implicits._
 

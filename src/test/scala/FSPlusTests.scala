@@ -1,4 +1,4 @@
-import rehearsal._
+import pup._
 import FSPlusParser._
 import FSPlusSyntax.{Statement, ValueConstraint}
 
@@ -19,8 +19,8 @@ class FSPlusTests extends org.scalatest.FunSuite {
 		val prog = parse("""
 			mkdir(</rachit>)
 		""")
-		
-		val constraints = parseConstraints("""
+
+    val constraints = parseConstraints("""
 			</awe> -> Dir
 		""")
 
@@ -37,8 +37,8 @@ class FSPlusTests extends org.scalatest.FunSuite {
 			mkdir(!</rachit>);
 			mkdir(</awe>)
 		""")
-		
-		val constraints = parseConstraints("""
+
+    val constraints = parseConstraints("""
 			</arjun> -> Dir
 		""")
 
@@ -54,8 +54,8 @@ class FSPlusTests extends org.scalatest.FunSuite {
 		val prog = parse("""
 			mkfile(</rachit>, "n00b")
 		""")
-		
-		val constraints = parseConstraints("""
+
+    val constraints = parseConstraints("""
 			</rachit> => "1337"
 		""")
 
@@ -72,8 +72,8 @@ class FSPlusTests extends org.scalatest.FunSuite {
 			mkdir(</bar>);
 			mkdir(</baz>)
 		""")
-		
-		val constraints = parseConstraints("""
+
+    val constraints = parseConstraints("""
 			</rachit/arjun/awe> -> Dir
 		""")
 
@@ -92,8 +92,8 @@ class FSPlusTests extends org.scalatest.FunSuite {
 			mkdir(</bar>);
 			mkdir(</baz>)
 		""")
-		
-		val constraints = parseConstraints("""
+
+    val constraints = parseConstraints("""
 			</rachit> -> Dir, </baz> -> Null
 		""")
 
@@ -113,8 +113,8 @@ class FSPlusTests extends org.scalatest.FunSuite {
 			then mkdir(</bar>)
 			else mkdir(</baz>)
 		""")
-		
-		val constraints = parseConstraints("""
+
+    val constraints = parseConstraints("""
 			</awe> -> Dir, </foo> -> Dir
 		""")
 
@@ -157,11 +157,11 @@ class FSPlusTests extends org.scalatest.FunSuite {
 	}
 
 	test("Update simple path concatenation") {
-		val prog = parse("""		
+		val prog = parse("""
 			mkdir(</home> + <rachit>)
 		""")
-		
-		val constraints = parseConstraints("""
+
+    val constraints = parseConstraints("""
 			</home/awe> -> Dir
 		""")
 
@@ -173,14 +173,14 @@ class FSPlusTests extends org.scalatest.FunSuite {
 	}
 
 	test("Update path concatenation with let bindings") {
-		val prog = parse("""	
-			let home = </home> in	
+		val prog = parse("""
+			let home = </home> in
 			mkdir(home);
 			mkdir(home + <rachit>);
 			mkdir(home + <awe>);
 			mkdir(home + <arjun>)
 		""")
-		
+
 		val constraints = parseConstraints("""
 			</root/awe> -> Dir,
 			</root/rachit> -> Dir,
@@ -189,7 +189,7 @@ class FSPlusTests extends org.scalatest.FunSuite {
 
 		val expect = parse("""
 			let home = </root> in
-			mkdir(home);	
+			mkdir(home);
 			mkdir(home + <rachit>);
 			mkdir(home + <awe>);
 			mkdir(home + <arjun>)
@@ -200,7 +200,7 @@ class FSPlusTests extends org.scalatest.FunSuite {
 
 	test("Update simple string concatenation") {
 		val prog = parse("""
-			mkfile(</rachit>, !"more cats" + " more dogs")
+			mkfile(</rachit>, !"more cats " + "more dogs")
 		""")
 
 		val constraints = parseConstraints("""
@@ -208,7 +208,7 @@ class FSPlusTests extends org.scalatest.FunSuite {
 		""")
 
 		val expect = parse("""
-			mkfile(</rachit>, !"more cats" + " less dogs")
+			mkfile(</rachit>, !"more cats " + "less dogs")
 		""")
 
 		makeAssertion(prog, constraints, expect)
@@ -223,8 +223,8 @@ class FSPlusTests extends org.scalatest.FunSuite {
 		""")
 
 		val constraints = parseConstraints("""
-			</rachit> => "user is inactive", 
-			</arjun> => "user is super-user", 
+			</rachit> => "user is inactive",
+			</arjun> => "user is super-user",
 			</awe> => "user is a cat"
 		""")
 
@@ -247,8 +247,8 @@ class FSPlusTests extends org.scalatest.FunSuite {
 		""")
 
 		val constraints = parseConstraints("""
-			</rachit> => "cat is active", 
-			</arjun> => "cat is active", 
+			</rachit> => "cat is active",
+			</arjun> => "cat is active",
 			</awe> => "cat is active"
 		""")
 

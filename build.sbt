@@ -1,6 +1,6 @@
-name := "rehearsal"
+name := "pup"
 version := "0.1"
-scalaVersion := "2.11.7"
+scalaVersion := "2.11.8"
 scalacOptions ++= Seq(
   "-deprecation",
   "-unchecked",
@@ -39,5 +39,5 @@ libraryDependencies ++=
 
 testOptions in Test += Tests.Argument("-oD")
 
-assemblyJarName in assembly := "rehearsal.jar"
+assemblyJarName in assembly := "pup.jar"
 test in assembly := {}

@@ -1,4 +1,4 @@
-package rehearsal
+package pup
 
 import FSPlusSyntax.{FileState, LangPath}
 import PrettyFSPlusTrace._

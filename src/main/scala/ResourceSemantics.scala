@@ -1,4 +1,4 @@
-package rehearsal
+package pup
 
 object ResourceSemantics {
 

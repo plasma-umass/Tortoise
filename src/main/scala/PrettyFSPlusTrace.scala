@@ -1,11 +1,11 @@
-package rehearsal
+package pup
 
 import org.bitbucket.inkytonik.kiama.output.PrettyPrinter
 import FSPlusTrace._
 import FSPlusSyntax.{FileState, IsFile, IsDir, DoesNotExist}
 
 object PrettyFSPlusTrace {
-  import rehearsal.{FSPlusTracePretty => P}
+  import pup.{FSPlusTracePretty => P}
 
   def prettyStmt(stmt: Statement): String = P.layout(P.prettyStmt(stmt))
   def prettyExpr(expr: Expr): String = P.layout(P.prettyExpr(expr))

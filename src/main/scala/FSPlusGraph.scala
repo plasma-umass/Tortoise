@@ -1,4 +1,4 @@
-package rehearsal
+package pup
 
 import scalax.collection.Graph
 import scalax.collection.GraphEdge.DiEdge

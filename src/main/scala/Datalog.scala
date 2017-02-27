@@ -1,9 +1,9 @@
-package rehearsal
+package pup
 
 object Datalog {
 
   import edu.umass.cs.extras.Implicits._
-  import rehearsal.Implicits._
+  import Implicits._
 
   trait DatalogImpl {
     def eval(assertions: List[Assertion]): List[Fact]

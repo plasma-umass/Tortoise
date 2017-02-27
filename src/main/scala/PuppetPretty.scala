@@ -1,4 +1,4 @@
-package rehearsal
+package pup
 
 import org.bitbucket.inkytonik.kiama.output.PrettyPrinter
 import PuppetSyntax._

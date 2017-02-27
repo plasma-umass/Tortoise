@@ -1,4 +1,4 @@
-import rehearsal._
+import pup._
 import FSPlusParser._
 import FSPlusSyntax.{Statement, ValueConstraint}
 

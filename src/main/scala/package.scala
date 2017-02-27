@@ -1,9 +1,8 @@
-
-package object rehearsal {
+package object pup {
 
   import java.nio.file.{Paths, Files}
-  import rehearsal.Implicits._
   import org.slf4j.LoggerFactory
+  import Implicits._
 
   type Path = java.nio.file.Path
 

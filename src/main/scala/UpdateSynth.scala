@@ -1,17 +1,17 @@
-package rehearsal
+package pup
 
 import edu.umass.cs.smtlib._
 import smtlib.parser.Commands._
 import smtlib.parser.Terms._
 import smtlib.theories.Core._
 import smtlib.theories.Ints._
-import rehearsal.FSPlusSyntax.{FileState, IsFile, IsDir, DoesNotExist}
-import rehearsal.FSPlusSyntax.{Constraint, ValueConstraint, LocationConstraint, Substitution}
-import rehearsal.FSPlusSyntax.{PathConstraint, PathLocationConstraint}
-import rehearsal.FSPlusSyntax.{StringConstraint, StringLocationConstraint}
-import rehearsal.FSPlusTrace.{Type, TPath, TString}
-import rehearsal.{FSPlusSyntax => FSP}
-import rehearsal.{FSPlusTrace => T}
+import pup.FSPlusSyntax.{FileState, IsFile, IsDir, DoesNotExist}
+import pup.FSPlusSyntax.{Constraint, ValueConstraint, LocationConstraint, Substitution}
+import pup.FSPlusSyntax.{PathConstraint, PathLocationConstraint}
+import pup.FSPlusSyntax.{StringConstraint, StringLocationConstraint}
+import pup.FSPlusTrace.{Type, TPath, TString}
+import pup.{FSPlusSyntax => FSP}
+import pup.{FSPlusTrace => T}
 import Implicits.RichPath
 import scala.collection.JavaConversions._
 
@@ -35,13 +35,20 @@ object UpdateSynth {
     val (paths, strings) = PlusHelpers.calculateConsts(stmt)
 
     val basePaths = constraintPaths ++ paths ++ Settings.assumedDirs
-    val allStrings = strCs.map(_.contents).toSet ++ Set("") ++ strings
+    val baseStrings = strCs.map(_.contents).toSet ++ Set("") ++ strings
 
     val allPaths: Set[Path] = basePaths.flatMap { path =>
         val conts = path.iterator.toList
-        (1 until conts.size).flatMap{ i =>
+        (1 until conts.size).flatMap { i =>
           conts.toList.sliding(i).toList.map(_.reduce { _ concat  _})
         } ++ basePaths
+    }
+
+    val allStrings: Set[String] = baseStrings.flatMap { str =>
+      val conts = str.split(" ")
+      (1 until conts.size).flatMap { i =>
+        conts.toList.sliding(i).toList.map(_.reduce { _ + _ })
+      } ++ baseStrings
     }
 
     // Calculate soft constraints
@@ -158,6 +165,7 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
         acc
       )
     }
+
   eval(DefineFun(FunDef(
     SSymbol("cat-strings"), Seq(SortedVar(SSymbol("s1"), stringSort), SortedVar(SSymbol("s2"), stringSort)),
     stringSort, concatStringBody

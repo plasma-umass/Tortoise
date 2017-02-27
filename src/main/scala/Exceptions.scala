@@ -1,4 +1,4 @@
-package rehearsal
+package pup
 
 // Ill-formed input
 case class Unexpected(message: String) extends RuntimeException(message)
