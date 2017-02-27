@@ -91,11 +91,11 @@ class UpdateSynth(paths: Set[Path], strings: Set[String], defaultFS: Map[Path, F
   )))
 
   // Generate String datatype
-  val stringSort = Sort(SimpleIdentifier(SSymbol("String")))
+  val stringSort = Sort(SimpleIdentifier(SSymbol("PuppetString")))
   val stringCtrs = strings.toSeq.map(s => Constructor(SSymbol(strMap.rep(s)), Seq()))
   val noStringCtr = Constructor(SSymbol("NoString"), Seq())
   eval(DeclareDatatypes(Seq(
-    SSymbol("String") -> (noStringCtr +: stringCtrs)
+    SSymbol("PuppetString") -> (noStringCtr +: stringCtrs)
   )))
 
   // Declare State datatype.
