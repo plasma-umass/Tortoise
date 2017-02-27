@@ -6,9 +6,6 @@ jdk: oraclejdk8
 install:
   - ./fetch-travis-deps.sh
 script:
-  - wget https://www.cs.umass.edu/~arjun/dl/rehearsal-private-master.zip
-  - unzip rehearsal-private-master
-  - mv rehearsal-private-master Private
   - PATH=$PATH:/home/travis/mydeps/datalog-2.5:/home/travis/mydeps/z3/bin sbt test-only -- -oD
 cache:
   directories:
