@@ -362,8 +362,8 @@ class SimplePuppetTests extends org.scalatest.FunSuite {
 		""")
 
 		val constraints = parseConstraints("""
-			</home/rachit> -> dir, </etc/users/rachit> -> dir, </etc/groups/rachit> -> dir, 
-			</home/rachit/.vimrc> -> file, </home/arjun> -> null, </etc/users/arjun> -> null, 
+			</home/rachit> -> dir, </etc/users/rachit> -> dir, </etc/groups/rachit> -> dir,
+			</home/rachit/.vimrc> -> file, </home/arjun> -> null, </etc/users/arjun> -> null,
 			</etc/groups/arjun> -> null, </home/arjun/.vimrc> -> null
 		""")
 
@@ -424,8 +424,8 @@ class SimplePuppetTests extends org.scalatest.FunSuite {
 		""")
 
 		val constraints = parseConstraints("""
-			</home/rachit> -> dir, </etc/users/rachit> -> dir, </etc/groups/rachit> -> dir, 
-			</home/rachit/.vimrc> -> file, </home/awe> -> null, </etc/users/awe> -> null, 
+			</home/rachit> -> dir, </etc/users/rachit> -> dir, </etc/groups/rachit> -> dir,
+			</home/rachit/.vimrc> -> file, </home/awe> -> null, </etc/users/awe> -> null,
 			</etc/groups/awe> -> null, </home/awe/.vimrc> -> null
 		""")
 

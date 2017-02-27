@@ -18,7 +18,7 @@ class FSPlusNegativeTests extends org.scalatest.FunSuite {
 		val prog = parse("""
 			mkdir(</rachit>)
 		""")
-		
+
 		val constraints = parseConstraints("""
 			</awe> -> Dir, </rachit> -> Dir
 		""")
@@ -30,7 +30,7 @@ class FSPlusNegativeTests extends org.scalatest.FunSuite {
 		val prog = parse("""
 			mkdir(</rachit>)
 		""")
-		
+
 		val constraints = parseConstraints("""
 			</haxor/rachit> -> Dir
 		""")
@@ -42,7 +42,7 @@ class FSPlusNegativeTests extends org.scalatest.FunSuite {
 		val prog = parse("""
 			mkdir(</rachit>)
 		""")
-		
+
 		val constraints = parseConstraints("""
 			</rachit> -> Null
 		""")
@@ -55,7 +55,7 @@ class FSPlusNegativeTests extends org.scalatest.FunSuite {
 			mkdir(</rachit>);
 			rm(</rachit>)
 		""")
-		
+
 		val constraints = parseConstraints("""
 			</rachit> -> Dir
 		""")
@@ -63,14 +63,14 @@ class FSPlusNegativeTests extends org.scalatest.FunSuite {
 		makeNegativeAssertion(prog, constraints)
 	}
 
-	test("Synthesis shoud not generate scripts that lead to incorrect file systems.") {
+	test("Synthesis should not generate scripts that lead to incorrect file systems.") {
 		val prog = parse("""
 			mkdir(</foo>);
 			mkdir(</bar>);
 			mkdir(</foo/rachit>);
 			rm(</bar>)
 		""")
-		
+
 		val constraints = parseConstraints("""
 			</foo> -> Null
 		""")
