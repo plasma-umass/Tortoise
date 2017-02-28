@@ -93,6 +93,19 @@ object Main extends App {
     }
   }
 
+  def catalogTest(config: Config): Unit = {
+    val fileName = config.string("filename")
+
+    Try({
+      Catalog.parseFile(fileName)
+    }) match {
+      case Success(manifest) => {
+        println(manifest)
+      }
+      case Failure(exn) => throw exn
+    }
+  }
+
   val parser = new scopt.OptionParser[Config]("rehearsal") {
 
     def string(name: String) = {
@@ -125,6 +138,11 @@ object Main extends App {
     cmd("shell")
       .action((_, c) => c.copy(command = pupShell))
       .text("Runs a fake shell for updating the specified Puppet manifest.")
+      .children(string("filename"))
+
+    cmd("catalog")
+      .action((_, c) => c.copy(command = catalogTest))
+      .text("Tests the catalog parsing support.")
       .children(string("filename"))
   }
 
