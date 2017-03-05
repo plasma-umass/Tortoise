@@ -1,24 +1,20 @@
 class vim($user) {
-  package { 
-    'vim':
+  package {"vim":
       ensure => present
   }
 
-  user {
-    $user:
+  user {"$user":
       ensure => present,
       managehome => true
   }
 
-  file {
-    '/home/${user}/.vimrc':
+  file {"/home/${user}/.vimrc":
       ensure => present,
       content => "set syntax=on",
-      require => Package['vim']
+      require => Package["vim"]
   }
 }
 
-vim {
-  'awe':
-    user => 'awe'
+class {"vim":
+    user => "awe"
 }
