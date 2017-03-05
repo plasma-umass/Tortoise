@@ -22,6 +22,7 @@ benchmarks
 # other stuff
 *.dot
 *.log
+*.bak
 
 # Intellij IDEA
 *.ipr
