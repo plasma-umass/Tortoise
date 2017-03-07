@@ -18,7 +18,7 @@ object FSPlusTrace {
   case class PTestFileContains(path: Expr, contents: Expr) extends Pred
 
   sealed trait Type
-  
+
   case object TPath extends Type
   case object TString extends Type
 
