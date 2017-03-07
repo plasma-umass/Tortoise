@@ -8,7 +8,14 @@ import scalax.collection.GraphPredef._
 import PuppetSyntax._
 
 object Catalog {
-  case class CRes(value: ResourceVal, edges: Seq[CEdge])
+  case class CRes(typ: String, title: Expr, attrs: Map[String, Expr] , edges: Seq[CEdge]) {
+    lazy val value: ResourceVal = {
+      implicit val env: Map[String, Expr] = Map()
+
+      ResourceVal(typ, evalToString(title), attrs)
+    }
+  }
+
   case class CEdge(source: EResourceRef, target: EResourceRef)
   case class Catalog(resources: Seq[CRes], edges: Seq[CEdge])
 
@@ -19,13 +26,51 @@ object Catalog {
   }
 
   object CatalogProtocol extends DefaultJsonProtocol {
+    var lastLoc = -1
+    def freshLoc(): Int = {
+      lastLoc += 1
+      lastLoc
+    }
+
+    val validId = {
+      Set('-', '_') union ('a' to 'z').toSet union ('A' to 'Z').toSet union ('0' to '9').toSet
+    }
+
+    def interpolateString(str: String): Expr = {
+      def nonEmpty(expr: Expr): Boolean = expr match {
+        case EStr(s) => s.length > 0
+        case EVar(id) => id.length > 0
+        case _ => true
+      }
+
+      // Split strings into individual components, separating out variables in order.
+      val terms = str.toSeq.foldLeft[Seq[Expr]](Seq(EStr(""))) {
+        case (acc, char) if char == '$' => EVar("") +: acc
+        case (EStr(str) +: acc, char) => EStr(str + char) +: acc
+        case (EVar(id) +: acc, char) if validId.contains(char) => EVar(id + char) +: acc
+        case (EVar(id) +: acc, char) if Set('{', '}').contains(char) => EVar(id) +: acc
+        case (acc@(EVar(_) +: _), char) => EStr(char.toString) +: acc
+      }.filter(nonEmpty).reverse.map({
+        case str@EStr(_) => str.setLoc(freshLoc())
+        case expr => expr
+      })
+
+      // Return a simple EStr or EVar if interpolation is not actually taking place here.
+      terms match {
+        case Seq(term) => term
+        case _ => EStrInterp(terms)
+      }
+    }
+
     implicit object exprFormat extends JsonFormat[Expr] with WithoutWriter[Expr] {
       val re = """^(.*)\[(.*)\]$""".r
 
       def read(value: JsValue): Expr = value match {
         case JsString(str) => re.findFirstMatchIn(str) match {
-          case Some(res) => EResourceRef(res.group(2).toLowerCase, EStr(res.group(1).toLowerCase))
-          case None => EStr(str)
+          case Some(res) => EResourceRef(
+            res.group(1).toLowerCase, interpolateString(res.group(2).toLowerCase)
+          )
+          case None => interpolateString(str)
         }
         case JsBoolean(b) => EBool(b)
         case JsArray(arr) => EArray(arr.map(read(_)))
@@ -49,8 +94,12 @@ object Catalog {
       ) match {
         case Seq(JsString(typ), JsString(title), JsObject(params)) => {
           def edgify(require: Boolean)(expr: Expr): CEdge = expr match {
-            case ref@EResourceRef(_, _) if require => CEdge(ref, EResourceRef(typ, EStr(title)))
-            case ref@EResourceRef(_, _) => CEdge(EResourceRef(typ, EStr(title)), ref)
+            case ref@EResourceRef(_, _) if require => CEdge(
+              ref, EResourceRef(typ, interpolateString(title.toLowerCase))
+            )
+            case ref@EResourceRef(_, _) => CEdge(
+              EResourceRef(typ, interpolateString(title.toLowerCase)), ref
+            )
             case _ => throw new DeserializationException(s"Expected resource ref, but found $expr")
           }
 
@@ -61,10 +110,10 @@ object Catalog {
           val attrs = (params - "require" - "before" - "notify" - "type").mapValues(x =>
             x.convertTo[Expr]
           )
-          CRes(ResourceVal(typ.toLowerCase, title.toLowerCase, attrs), edges)
+          CRes(typ.toLowerCase, JsString(title.toLowerCase).convertTo[Expr], attrs, edges)
         }
-        case Seq(JsString(typ), JsString(title)) => {
-          CRes(ResourceVal(typ.toLowerCase, title.toLowerCase, Map()), Seq())
+        case Seq(JsString(typ), title) => {
+          CRes(typ.toLowerCase, title.convertTo[Expr], Map(), Seq())
         }
         case res => throw new DeserializationException(s"Failed to deserialize resource from $res")
       }
@@ -116,16 +165,89 @@ object Catalog {
     })
   }
 
-  def evaluate(catalog: Catalog): EvaluatedManifest = {
+  def updateCatalog(catalog: Catalog): (Catalog, Map[String, Int], Map[String, Seq[String]]) = {
+    // Build a mapping from class names to environments.
+    val envMap: Map[String, Map[String, Expr]] = catalog.resources.filter({
+      res => res.typ == "class"
+    }).map({
+      classRes => (classRes.title.asInstanceOf[EStr].s, classRes.attrs)
+    }).toMap
+
+    // Calculate the updated catalog.
+    val resCatalog = catalog.edges.filter(edge => edge.source.typ == "class").foldLeft(catalog) {
+      case (currentCatalog, edge@CEdge(source, target)) => {
+        implicit val env = envMap(source.title.asInstanceOf[EStr].s)
+
+        val resources = currentCatalog.resources.map({
+          case res@CRes(typ, title, attrs, edges) => {
+            if (typ == target.typ && evalToString(title) == evalToString(target.title)) {
+              CRes(typ, evalExpr(title), attrs.mapValues(evalExpr), edges)
+            } else {
+              res
+            }
+          }
+        })
+
+        val edges = currentCatalog.edges.map({
+          case edge@CEdge(source, EResourceRef(targetTyp, targetTitle)) => {
+            if (source.typ == "class") {
+              implicit val env = envMap(source.title.asInstanceOf[EStr].s)
+
+              CEdge(source, EResourceRef(targetTyp, evalExpr(targetTitle)))
+            } else {
+              edge
+            }
+          }
+        })
+
+        Catalog(resources, edges)
+      }
+    }
+
+    // Calculate the location map.
+    val locMap = envMap.values.map(_.values).flatten.filter(_.isInstanceOf[EStr]).map({
+      case expr@EStr(str) => (str, expr.loc)
+      case _ => throw Unexpected("This path should be unreachable.")
+    }).toMap
+
+    // Calculate the interpolation map.
+    val interpMap = envMap.values.flatMap({
+      implicit env => env.values.filter(_.isInstanceOf[EStrInterp]).map({
+        case expr@EStrInterp(exprs) => (evalToString(expr), exprs.map(evalToString))
+        case _ => throw Unexpected("This path should be unreachable.")
+      })
+    }).toMap
+
+    (resCatalog, locMap, interpMap)
+  }
+
+  def evalToString(expr: Expr)(implicit env: Map[String, Expr]): String = expr match {
+    case EVar(id) => evalToString(env(id))
+    case EStr(str) => str
+    case EStrInterp(exprs) => exprs.map(evalToString).mkString
+    case _ => throw Unexpected("This path should be unreachable.")
+  }
+
+  def evalExpr(expr: Expr)(implicit env: Map[String, Expr]): Expr = expr match {
+    case EVar(id) => evalExpr(env(id))
+    case EBool(_) | EStr(_) => expr
+    case EStrInterp(exprs) => EStrInterp(exprs.map(evalExpr))
+    case EArray(es) => EArray(es.map(evalExpr))
+    case EResourceRef(typ, title) => EResourceRef(typ, evalExpr(title))
+    case _ => throw Unexpected("This path should be unreachable.")
+  }
+
+  def evaluate(initalCatalog: Catalog): EvaluatedManifest = {
+    val (catalog, locMap, interpMap) = updateCatalog(initalCatalog)
     val deps = makeGraph(catalog.resources)
     addEdges(deps, catalog.edges)
     elimCompoundResources(deps)
 
     val resources = catalog.resources.map({
-      case CRes(value, _) => (value.node, value)
+      case res@CRes(_, _, _, _) => (res.value.node, res.value)
     }).toMap
 
-    EvaluatedManifest(resources, deps, Map(), Map())
+    EvaluatedManifest(resources, deps, locMap, interpMap)
   }
 
   def parseFile(path: String): EvaluatedManifest = {
