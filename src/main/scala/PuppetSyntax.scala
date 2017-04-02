@@ -1,172 +1,44 @@
 package pup
 
-object PuppetSyntax extends com.typesafe.scalalogging.LazyLogging {
+object PuppetSyntax {
+  // Attributes for resource instantiations.
+  case class Attribute(name: String, value: Expr)
+  type Attributes = Seq[Attribute]
+  // Arguments to define types.
+  // NOTE: we may wish to include types later.
+  case class Argument(vari: EVar, default: Option[Expr])
+  type Arguments = Seq[Argument]
 
-  import scala.util.parsing.input.Positional
-  import scalax.collection.Graph
-  import scalax.collection.GraphEdge.DiEdge
-  import Implicits._
+  sealed trait Const
+  case class CStr(str: String) extends Const
+  case class CNum(n: Int) extends Const
+  case class CBool(bool: Boolean) extends Const
 
-  // Documentation states that include can accept:
-  //   * a single class name (apache) or a single class reference (Class['apache'])
-  //   * a comma separated list of class names or class references
-  //   * an array of class names or class references
-  //  Examples:
-  //  include base::linux
-  //  include Class['base::linux'] # including a class reference
-  //  include base::linux, apache # including a list
-  //  $my_classes = ['base::linux', 'apache']
-  //  include $my_classes # including an array
-  //
-  //  NOTE: The parser tests only include the first of these three
-  //
-  // The main difference between include and require is that require
-  // causes the surrounding container to have a dependency on that class.
-  // That is, all of the resources in the class are guaranteed to
-  // have been applied before the surrounding structure is instantiated
-  // Another difference is that requiring the same class twice is actually
-  // a runtime error.
+  sealed trait UnOp
+  case object UNot extends UnOp
+  case object UNeg extends UnOp
 
+  sealed trait BinOp
+  case object BAnd extends BinOp
+  case object BOr extends BinOp
+  case object BEq extends BinOp
+  case object BLt extends BinOp
+  case object BGt extends BinOp
 
-  case class Attribute(name: Expr, value: Expr)
-  case class Argument(id: String, default: Option[Expr]) //ignoring types for now
-
-  sealed trait Resource extends Positional
-  case class ResourceDecl(typ: String, resources: Seq[(Expr, Seq[Attribute])]) extends Resource
-  case class ResourceRef(typ: String, title: Expr, attrs: Seq[Attribute]) extends Resource
-  case class RCollector(typ: String, expr: RExpr) extends Resource
-
-  sealed trait Case extends Positional
-  case class CaseDefault(m: Manifest) extends Case
-  case class CaseExpr(e: Expr, m: Manifest) extends Case
-
-  sealed trait Manifest extends Positional {
-
-    override def toString: String = PuppetPretty.pretty(this)
-
-    def >>(other: Manifest) = (this, other) match {
-      case (MEmpty, _) => other
-      case (_, MEmpty) => this
-      case _ => MSeq(this, other)
-    }
-
-    def locMap(): Map[String, Int] = PlusHelpers.getLocationMap(this)
-
-    def interpMap(store: PuppetEval.Store): Map[String, Seq[String]] = {
-      PlusHelpers.getStrInterpMap(this, store)
-    }
-
-    def eval(): EvaluatedManifest = PuppetEval.eval(this)
-  }
-
-  case object MEmpty extends Manifest
-  case class MSeq private[PuppetSyntax](m1: Manifest, m2: Manifest) extends Manifest
-  case class MResources(resources: Seq[Resource]) extends Manifest
-  case class MDefine(name: String, params: Seq[Argument], body: Manifest) extends Manifest
-  case class MClass(
-    name: String, params: Seq[Argument], inherits: Option[String], body: Manifest
-  ) extends Manifest
-  case class MSet(varName: String, e: Expr) extends Manifest
-  case class MCase(e: Expr, cases: Seq[Case]) extends Manifest
-  case class MIte(pred: Expr, m1: Manifest, m2: Manifest) extends Manifest
-  case class MInclude(es: List[Expr]) extends Manifest
-  case class MRequire(e: Expr) extends Manifest
-  case class MApp(name: String, args: Seq[Expr]) extends Manifest
-  case class MResourceDefault(typ: String, attrs: Seq[Attribute]) extends Manifest
-
-   // Manifests must not appear in Expr, either directly or indirectly
-  sealed trait Expr extends Positional {
-    def value[T](implicit extractor: Extractor[Expr, T]) = extractor(this)
-
-    var keyword: Boolean = false
-
-    def setKeyword(): Expr = {
-      keyword = true
-      this
-    }
-
-    def isKeyword(): Boolean = keyword
-
-    var currLoc: Option[Int] = None
-
-    def setLoc(loc: Int): Expr = {
-      currLoc = Some(loc)
-      this
-    }
-
-    def setLoc(loc: Option[Int]): Expr = {
-      currLoc = loc
-      this
-    }
-
-    def loc(): Int = currLoc.get
-  }
-
+  sealed trait Expr
+  type Exprs = Seq[Expr]
   case object EUndef extends Expr
-  case class EStr(s: String) extends Expr {
-    override def setLoc(loc: Int): EStr = super.setLoc(loc).asInstanceOf[EStr]
-    override def setLoc(loc: Option[Int]): EStr = super.setLoc(loc).asInstanceOf[EStr]
+  case class EVar(id: String, loc: Int) extends Expr
+  case class EConst(c: Const, loc: Int) extends Expr
+  case class ERef(typ: String, title: Expr) extends Expr
+  case class EStrInterp(terms: Exprs) extends Expr
+  case class EUnOp(op: UnOp, operand: Expr) extends Expr
+  case class EBinOp(op: BinOp, lhs: Expr, rhs: Expr) extends Expr
 
-    override def toString: String = currLoc match {
-      case Some(loc) => s""""$s"[$loc]"""
-      case None => s""""$s""""
-    }
-  }
-  case class EStrInterp(terms: Seq[Expr]) extends Expr
-  case class ENum(n: Int) extends Expr
-  case class EVar(name: String) extends Expr
-  case class EBool(b: Boolean) extends Expr
-  case class ENot(e: Expr) extends Expr
-  case class EAnd(e1: Expr, e2: Expr) extends Expr
-  case class EOr(e1: Expr, e2: Expr) extends Expr
-  case class EEq(e1: Expr, e2: Expr) extends Expr
-  case class ELT(n1: Expr, n2: Expr) extends Expr
-  case class EMatch(e1: Expr, e2: Expr) extends Expr
-  case class EIn(e1: Expr, e2: Expr) extends Expr
-  case class EArray(es: Seq[Expr]) extends Expr
-  case class EApp(name: String, args: Seq[Expr]) extends Expr
-  case class ERegex(regex: String) extends Expr
-  case class ECond(test: Expr, truePart: Expr, falsePart: Expr) extends Expr
-  case class EResourceRef(typ: String, title: Expr) extends Expr
-
-  sealed trait RExpr extends Positional
-  case class REAttrEqual(attr: String, value: Expr) extends RExpr
-  case class REAnd(e1: RExpr, e2: RExpr) extends RExpr
-  case class REOr(e1: RExpr, e2: RExpr) extends RExpr
-  case class RENot(e: RExpr) extends RExpr
-
-  // Our representation of fully evaluataed manifests, where nodes are primitive resources.
-  case class EvaluatedManifest(
-    ress: Map[FSPlusGraph.Key, ResourceVal], deps: Graph[FSPlusGraph.Key, DiEdge],
-    locMap: Map[String, Int], interpMap: Map[String, Seq[String]]
-  ) {
-    def resourceGraph(): ResourceGraph = {
-      ResourceGraph(
-        ress.mapValues(x => ResourceSemantics.compile(x)).view.force, deps, locMap, interpMap
-      )
-    }
-  }
-
-  case class ResourceVal(typ: String, title: String, attrs: Map[String, Expr]) {
-    val node: FSPlusGraph.Key = Node(typ, title)
-  }
-
-  val primTypes =  Set("file", "package", "user", "group", "service",
-    "ssh_authorized_key", "augeas", "notify", "cron", "host")
-
-  case class Node(typ: String, title: String) extends FSPlusGraph.Key {
-    lazy val isPrimitiveType = primTypes.contains(typ)
-  }
-
-  case class ResourceGraph(
-    ress: Map[FSPlusGraph.Key, ResourceModelPlus.Res], deps: Graph[FSPlusGraph.Key, DiEdge],
-    locMap: Map[String, Int], interpMap: Map[String, Seq[String]]
-  ) {
-
-    def fsGraph(distro: String): FSPlusGraph = {
-      FSPlusGraph(ress.mapValues(_.compile(locMap, interpMap, distro)).view.force, deps)
-    }
-  }
-
-  type FileScriptGraph = FSPlusGraph
+  sealed trait Manifest
+  case object MEmpty extends Manifest
+  case class MResource(typ: String, title: Expr, attrs: Attributes) extends Manifest
+  case class MDefine(typ: String, args: Arguments, body: Manifest) extends Manifest
+  case class MSeq(lhs: Manifest, rhs: Manifest) extends Manifest
+  case class MIf(pred: Expr, cons: Manifest, alt: Manifest) extends Manifest
 }
