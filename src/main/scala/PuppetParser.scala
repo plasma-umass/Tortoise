@@ -2,20 +2,14 @@ package pup
 
 import scala.util.parsing.combinator._
 
-import pup.PuppetSyntax._
+import CommonSyntax._
+import PuppetSyntax._
 
 private class PuppetParser extends RegexParsers with PackratParsers {
   type P[T] = PackratParser[T]
 
   // Override whitespace filtering to include comments.
   override protected val whiteSpace = """(\s|#.*|(/\*((\*[^/])|[^*])*\*/))+""".r
-
-  // Label generation for parse-time location tagging.
-  var loc = 0
-  def freshLoc(): Int = {
-    loc += 1
-    loc
-  }
 
   // General parser combinators
   def parens[T](parser: P[T]): P[T] = "(" ~> parser <~ ")"
@@ -48,10 +42,10 @@ private class PuppetParser extends RegexParsers with PackratParsers {
     word ~ ("[" ~> expr <~ "]") ^^ { case typ ~ title => ERef(typ, title) }
 
   lazy val variable: P[EVar] =
-    variableName ^^ { id => EVar(id, freshLoc()) }
+    variableName ^^ { id => EVar(id) }
 
   lazy val constant: P[EConst] =
-    const ^^ { c => EConst(c, freshLoc()) }
+    const ^^ { c => EConst(c) }
 
   lazy val atomicExpr: P[Expr] =
     variable | constant | resourceRef | parens(expr)
@@ -97,7 +91,7 @@ private class PuppetParser extends RegexParsers with PackratParsers {
 
   // Puppet attributes
   lazy val keyword: P[Expr] =
-    identifier ^^ { str => EConst(CStr(str), freshLoc()) }
+    identifier ^^ { str => EConst(CStr(str)) }
 
   lazy val attribute: P[Attribute] =
     identifier ~ ("=>" ~> (keyword | expr)) ^^ {

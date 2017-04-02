@@ -1,5 +1,7 @@
 package pup
 
+import CommonSyntax._
+
 object PuppetSyntax {
   // Attributes for resource instantiations.
   case class Attribute(name: String, value: Expr)
@@ -8,11 +10,6 @@ object PuppetSyntax {
   // NOTE: we may wish to include types later.
   case class Argument(vari: EVar, default: Option[Expr])
   type Arguments = Seq[Argument]
-
-  sealed trait Const
-  case class CStr(str: String) extends Const
-  case class CNum(n: Int) extends Const
-  case class CBool(bool: Boolean) extends Const
 
   sealed trait UnOp
   case object UNot extends UnOp
@@ -28,8 +25,8 @@ object PuppetSyntax {
   sealed trait Expr
   type Exprs = Seq[Expr]
   case object EUndef extends Expr
-  case class EVar(id: String, loc: Int) extends Expr
-  case class EConst(c: Const, loc: Int) extends Expr
+  case class EVar(id: String) extends Expr
+  case class EConst(c: Const) extends Expr
   case class ERef(typ: String, title: Expr) extends Expr
   case class EStrInterp(terms: Exprs) extends Expr
   case class EUnOp(op: UnOp, operand: Expr) extends Expr
