@@ -106,6 +106,11 @@ object PuppetSyntax extends com.typesafe.scalalogging.LazyLogging {
   case class EStr(s: String) extends Expr {
     override def setLoc(loc: Int): EStr = super.setLoc(loc).asInstanceOf[EStr]
     override def setLoc(loc: Option[Int]): EStr = super.setLoc(loc).asInstanceOf[EStr]
+
+    override def toString: String = currLoc match {
+      case Some(loc) => s""""$s"[$loc]"""
+      case None => s""""$s""""
+    }
   }
   case class EStrInterp(terms: Seq[Expr]) extends Expr
   case class ENum(n: Int) extends Expr
