@@ -4,6 +4,7 @@ import scala.util.parsing.combinator._
 
 import CommonSyntax._
 import PuppetSyntax._
+import StringInterpolator._
 
 private class PuppetParser extends RegexParsers with PackratParsers {
   type P[T] = PackratParser[T]
@@ -32,7 +33,6 @@ private class PuppetParser extends RegexParsers with PackratParsers {
 
   // Puppet constants
   lazy val const: P[Const] =
-    doubleQuotedString ^^ { str => CStr(str) } | // TODO: Add string interpolation here.
     singleQuotedString ^^ { str => CStr(str) } |
     number ^^ { num => CNum(num) } |
     boolean ^^ { bool => CBool(bool) }
@@ -44,8 +44,14 @@ private class PuppetParser extends RegexParsers with PackratParsers {
   lazy val constant: P[EConst] =
     const ^^ { c => EConst(c) }
 
+  lazy val strInterp: P[Expr] =
+    doubleQuotedString ^^ { str => interpolateString(str) }
+
   lazy val atomicExpr: P[Expr] =
-    variable | constant | parens(expr)
+    variable  |
+    strInterp |
+    constant  |
+    parens(expr)
 
   lazy val unaryOp: P[Expr] =
     "!" ~> unaryOp ^^ { case expr => EUnOp(UNot, expr) } |
