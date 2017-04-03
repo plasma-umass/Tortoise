@@ -27,7 +27,6 @@ object PuppetSyntax {
   case object EUndef extends Expr
   case class EVar(id: String) extends Expr
   case class EConst(c: Const) extends Expr
-  // case class ERef(typ: String, title: Expr) extends Expr
   case class EStrInterp(terms: Exprs) extends Expr
   case class EUnOp(op: UnOp, operand: Expr) extends Expr
   case class EBinOp(op: BinOp, lhs: Expr, rhs: Expr) extends Expr
