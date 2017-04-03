@@ -34,7 +34,7 @@ object PuppetCompiler {
 
   def compileExpr(expr: P.Expr): F.Expr = expr match {
     case P.EUndef => undef 
-    case P.EVar(id) => F.EVar(id) 
+    case P.EVar(id) => $(id) 
     case P.EConst(c) => F.EConst(c)
     case P.EStrInterp(terms) => terms.map(compileExpr).reduce[F.Expr]({
       case (lhs, rhs) => lhs + rhs 
@@ -84,9 +84,9 @@ object PuppetCompiler {
   }
 
   def compileManifest(mani: P.Manifest)(implicit renv: ResEnv): (F.Statement, ResEnv) = mani match {
-    case P.MEmpty => (F.SSkip, renv)
+    case P.MEmpty => (skip, renv)
     case P.MResource(typ, title, attrs) => (compileResource(typ, title, attrs), renv)
-    case P.MDefine(typ, args, body) => (F.SSkip, renv + (typ -> (args, nLocs(args.length), body)))
+    case P.MDefine(typ, args, body) => (skip, renv + (typ -> (args, nLocs(args.length), body)))
     case P.MSeq(lhs, rhs) => {
       val (c1, renv1) = compileManifest(lhs)
       val (c2, renv2) = compileManifest(rhs)(renv1)
