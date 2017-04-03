@@ -93,7 +93,13 @@ object PuppetCompiler {
       (c1 >> c2, renv2)
     }
     case P.MIf(pred, cons, alt) => {
-      ???
+      val cmd =
+        _if (compileExpr(pred)) {
+          compileManifest(cons)._1
+        } _else {
+          compileManifest(alt)._1
+        }
+      (cmd, renv)
     }
   }
 }

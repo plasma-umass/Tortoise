@@ -46,6 +46,7 @@ object FSEmbeddedDSL {
       case SIf(pred1, cons1, if2@SIf(_, _, _)) => SIf(pred1, cons1, if2._else(alt))
       case _ => throw MisusedEDSL(_if)
     }
+
     def else_if(pred: Expr)(body: Statement): SIf = _if match {
       case SIf(pred1, cons1, SSkip) => SIf(pred1, cons1, SIf(pred, body, skip))
       case SIf(pred1, cons1, if2@SIf(_, _, _)) => SIf(pred1, cons1, if2.else_if(pred)(body))
