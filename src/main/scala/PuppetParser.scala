@@ -38,8 +38,8 @@ private class PuppetParser extends RegexParsers with PackratParsers {
     boolean ^^ { bool => CBool(bool) }
 
   // Puppet expressions
-  lazy val resourceRef: P[ERef] =
-    word ~ ("[" ~> expr <~ "]") ^^ { case typ ~ title => ERef(typ, title) }
+  // lazy val resourceRef: P[ERef] =
+  //   word ~ ("[" ~> expr <~ "]") ^^ { case typ ~ title => ERef(typ, title) }
 
   lazy val variable: P[EVar] =
     variableName ^^ { id => EVar(id) }
@@ -48,7 +48,7 @@ private class PuppetParser extends RegexParsers with PackratParsers {
     const ^^ { c => EConst(c) }
 
   lazy val atomicExpr: P[Expr] =
-    variable | constant | resourceRef | parens(expr)
+    variable | constant | /* resourceRef | */ parens(expr)
 
   lazy val unaryOp: P[Expr] =
     "!" ~> unaryOp ^^ { case expr => EUnOp(UNot, expr) } |
