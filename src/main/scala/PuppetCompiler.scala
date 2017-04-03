@@ -85,6 +85,13 @@ object PuppetCompiler {
 
   def compileManifest(mani: P.Manifest)(implicit renv: ResEnv): (F.Statement, ResEnv) = mani match {
     case P.MEmpty => (skip, renv)
+    case P.MAssign(id, value, body) => {
+      val cmd =
+        let (s"$id" := compileExpr(value) or freshLoc()) {
+          compileManifest(body)._1
+        }
+      (cmd, renv)
+    }
     case P.MResource(typ, title, attrs) => (compileResource(typ, title, attrs), renv)
     case P.MDefine(typ, args, body) => (skip, renv + (typ -> (args, nLocs(args.length), body)))
     case P.MSeq(lhs, rhs) => {

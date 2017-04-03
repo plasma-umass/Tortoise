@@ -122,9 +122,13 @@ private class PuppetParser extends RegexParsers with PackratParsers {
   lazy val atomicManifest: P[Manifest] =
     resourceInstantiation | defineType | ifManifest
 
-  lazy val sequence: P[Manifest] =
-    atomicManifest ~ sequence ^^ { case lhs ~ rhs => MSeq(lhs, rhs) } |
+  lazy val assign: P[Manifest] =
+    variableName ~ ("=" ~> expr) ~ assign ^^ { case id ~ expr ~ body => MAssign(id, expr, body) } |
     atomicManifest
+
+  lazy val sequence: P[Manifest] =
+    assign ~ sequence ^^ { case lhs ~ rhs => MSeq(lhs, rhs) } |
+    assign
 
   lazy val manifest: P[Manifest] = sequence
 }

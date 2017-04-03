@@ -35,6 +35,7 @@ object PuppetSyntax {
     lazy val compile: FSSyntax.Statement = PuppetCompiler.compileManifest(this)(Map())._1
   }
   case object MEmpty extends Manifest
+  case class MAssign(id: String, expr: Expr, body: Manifest) extends Manifest
   case class MResource(typ: String, title: Expr, attrs: Attributes) extends Manifest
   case class MDefine(typ: String, args: Arguments, body: Manifest) extends Manifest
   case class MSeq(lhs: Manifest, rhs: Manifest) extends Manifest
