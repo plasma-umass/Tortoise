@@ -130,6 +130,8 @@ object PrettyFS extends ParenPrettyPrinter {
 
   def prettyExpr(expr: Expr): String = super.pretty(showExpr(expr)).layout
 
+  def parindent(doc: Doc): Doc = lparen <@> indent(doc) <@> rparen
+
   def showStatement(stmt: Statement): Doc = stmt match {
     case SSkip => "skip"
     case SMkdir(path) => "mkdir" <> parens(showExpr(path))
@@ -141,8 +143,10 @@ object PrettyFS extends ParenPrettyPrinter {
     case SChmod(path, mode) => "chmod" <> parens(
       showExpr(path) <> comma <+> showExpr(mode)
     )
-    case SSeq(lhs@SIf(_, _, _), rhs) =>
-      lparen <> showStatement(lhs) <@> rparen <> semi <@> showStatement(rhs)
+    case SSeq(lhs@SIf(_, _, _), rhs@SIf(_, _, _)) =>
+      parindent(showStatement(lhs)) <> semi <@> parindent(showStatement(rhs))
+    case SSeq(lhs@SIf(_, _, _), rhs) => parindent(showStatement(lhs)) <> semi <@> showStatement(rhs)
+    case SSeq(lhs, rhs@SIf(_, _, _)) => showStatement(lhs) <> semi <@> parindent(showStatement(rhs))
     case SSeq(lhs, rhs) => showStatement(lhs) <> semi <@> showStatement(rhs)
     case SLet(id, expr, Some(idx), body) => "let" <+> dollar <> id <+> equal <+> showExpr(expr) <+>
         "or" <+> brackets(value(idx)) <@> "in" <+> showStatement(body)
