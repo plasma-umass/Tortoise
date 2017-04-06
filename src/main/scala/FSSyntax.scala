@@ -1,6 +1,7 @@
 package pup
 
 import CommonSyntax._
+import PrettyFS._
 
 object FSSyntax {
   sealed trait UnOp
@@ -18,14 +19,20 @@ object FSSyntax {
   case object BGt extends BinOp
   case object BConcat extends BinOp
 
-  sealed trait Expr
+  sealed trait Expr {
+    lazy val pretty: String = prettyExpr(this)
+  }
+
   case object EUndef extends Expr
   case class EVar(id: String) extends Expr
   case class EConst(const: Const) extends Expr
   case class EUnOp(op: UnOp, operand: Expr) extends Expr
   case class EBinOp(op: BinOp, lhs: Expr, rhs: Expr) extends Expr
 
-  sealed trait Statement
+  sealed trait Statement {
+    lazy val pretty: String = prettyStatement(this)
+  }
+
   case object SSkip extends Statement
   case class SMkdir(path: Expr) extends Statement
   case class SCreate(path: Expr, contents: Expr) extends Statement
