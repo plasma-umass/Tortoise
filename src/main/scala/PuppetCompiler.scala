@@ -33,11 +33,11 @@ object PuppetCompiler {
   }
 
   def compileExpr(expr: P.Expr): F.Expr = expr match {
-    case P.EUndef => undef 
-    case P.EVar(id) => $(id) 
+    case P.EUndef => undef
+    case P.EVar(id) => $(id)
     case P.EConst(c) => F.EConst(c)
     case P.EStrInterp(terms) => terms.map(compileExpr).reduce[F.Expr]({
-      case (lhs, rhs) => lhs + rhs 
+      case (lhs, rhs) => lhs + rhs
     })
     case P.EUnOp(op, operand) => F.EUnOp(compileUnOp(op), compileExpr(operand))
     case P.EBinOp(op, lhs, rhs) => F.EBinOp(compileBinOp(op), compileExpr(lhs), compileExpr(rhs))
@@ -49,7 +49,12 @@ object PuppetCompiler {
     // Handle special case for file resources.
     case "file" => {
       val attrMap = attrs.flatMap(P.Attribute.unapply).toMap
-      val path = attrMap.get("path").map(compileExpr).getOrElse(undef)
+      val directPath = attrMap.get("path").map(compileExpr).getOrElse(undef)
+      val path = if (directPath == undef) {
+        compileExpr(title)
+      } else {
+        directPath
+      }
       val mode = attrMap.get("mode").map(compileExpr).getOrElse(undef)
       val contents = attrMap.get("contents").map(compileExpr).getOrElse(undef)
       val ensure = attrMap.get("ensure").map(compileExpr).getOrElse(undef)
