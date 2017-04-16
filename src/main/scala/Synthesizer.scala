@@ -168,7 +168,7 @@ case class Synthesizer(paths: Set[String], defaultFS: Map[String, FileState]) {
     while (lo < hi) {
       solver.pushPop {
         solver.eval(Assert(
-          GreaterThan(
+          GreaterEquals(
             sum.id,
             SNumeral((lo + hi) / 2)
           )
