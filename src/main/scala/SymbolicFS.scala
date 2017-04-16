@@ -1,14 +1,21 @@
 package pup
 
-import edu.umass.cs.smtlib.SMT._
 import edu.umass.cs.smtlib.SMT.Implicits._
 import smtlib.parser.Commands._
 import smtlib.parser.Terms._
 import smtlib.theories.Core._
-import smtlib.theories.Ints._
 import smtlib.theories.experimental.Strings._
 
 object SymbolicFS {
+  /**
+    * Definitions for synthesizer
+    */
+
+  sealed trait FileState
+  case object File extends FileState
+  case object Dir extends FileState
+  case object Nil extends FileState
+
   /**
     * Type definitions for compiler use
     */

@@ -1,6 +1,5 @@
 package pup
 
-import edu.umass.cs.smtlib.SMT._
 import edu.umass.cs.smtlib.SMT.Implicits._
 import smtlib.parser.Commands._
 import smtlib.parser.Terms._
@@ -12,6 +11,12 @@ import pup.{FSSyntax => F}
 import SymbolicFS._
 
 object SymbolicFSCompiler {
+  def compileFileState(state: FileState): Term = state match {
+    case File => file
+    case Dir => dir
+    case Nil => nil
+  }
+
   def compileConst(const: C.Const): Term = const match {
     case C.CStr(str) => StringLit(str)
     case C.CNum(n) => NumeralLit(n)
