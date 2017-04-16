@@ -16,6 +16,18 @@ object SymbolicFS {
   case object Dir extends FileState
   case object Nil extends FileState
 
+  sealed trait Constraint {
+    def paths: Set[String] = this match {
+      case StateConstraint(path, _) => Set(path)
+      case ContentsConstraint(path, _) => Set(path)
+      case ModeConstraint(path, _) => Set(path)
+    }
+  }
+
+  case class StateConstraint(path: String, state: FileState) extends Constraint
+  case class ContentsConstraint(path: String, contents: String) extends Constraint
+  case class ModeConstraint(path: String, mode: String) extends Constraint
+
   /**
     * Type definitions for compiler use
     */
