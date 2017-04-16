@@ -10,4 +10,8 @@
    After installation, place the `z3` executable in your `PATH`.
 
 3. [sbt](http://www.scala-sbt.org) version 0.13.9 or higher.
-4. A Datalog implementation. Rehearsal will work with [John Ramsdell's Datalog](http://datalog.sourceforge.net) (version 2.5 or higher). With a little more work, other implementations can be used.
+
+
+### Testimonials
+
+"Hospitals use computers. Computers need to be configured. When computers are configured badly, they fail. When the computers hospitals use fail, people die. Some of those people are babies. This tool saves babies." - [Jared Holzman](https://github.com/JaredHolzman)
