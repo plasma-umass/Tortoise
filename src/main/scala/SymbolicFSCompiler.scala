@@ -242,6 +242,8 @@ object SymbolicFSCompiler {
       val exprTerm = compileExpr(expr)(prev._1.num)
       val variable = SSymbol(id)
 
+      val varDef = DeclareConst(SSymbol(id), stringSort)
+
       val count = SSymbol(s"count-$label")
       val countDef = DeclareConst(count, intSort)
 
@@ -254,7 +256,7 @@ object SymbolicFSCompiler {
 
       val (bodyCmds, bodyFuns) = compileStatement(body, cond, prev, curr)
 
-      (holeDefs ++ Seq(countDef, assert) ++ bodyCmds, bodyFuns)
+      (holeDefs ++ Seq(varDef, countDef, assert) ++ bodyCmds, bodyFuns)
     }
 
     // let id = expr in body
