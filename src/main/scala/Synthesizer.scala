@@ -29,7 +29,8 @@ object Synthesizer {
 
     // Create synthesizer and synthesize!
     val synthesizer = Synthesizer(paths, defaultFS)
-    synthesizer.synthesize(prog, constraints)
+    val partialedProg = FSPartialEvaluator.eval(prog)
+    synthesizer.synthesize(partialedProg, constraints)
   }
 }
 
@@ -128,6 +129,8 @@ case class Synthesizer(paths: Set[String], defaultFS: Map[String, FileState]) {
 
     val (commands, (lastStateHuh, lastContainsHuh, lastModeHuh)) =
       compileStatement(prog, True(), initialFuns, nextFuns)
+
+    println(commands)
 
     // Evaluate commands compiled from the program in the solver.
     commands.foreach {
