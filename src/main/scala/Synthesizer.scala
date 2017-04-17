@@ -29,8 +29,7 @@ object Synthesizer {
 
     // Create synthesizer and synthesize!
     val synthesizer = Synthesizer(paths, defaultFS)
-    val partialedProg = FSPartialEvaluator.eval(prog)
-    synthesizer.synthesize(partialedProg, constraints)
+    synthesizer.synthesize(prog.partialed, constraints)
   }
 }
 

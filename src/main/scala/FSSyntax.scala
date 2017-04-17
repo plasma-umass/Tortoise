@@ -31,6 +31,7 @@ object FSSyntax {
 
   sealed trait Statement {
     lazy val pretty: String = prettyStatement(this)
+    lazy val partialed: Statement = FSPartialEvaluator.eval(this)
   }
 
   case object SSkip extends Statement
