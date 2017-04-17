@@ -11,6 +11,8 @@ object SymbolicFS {
     * Definitions for synthesizer
     */
 
+  type Substitution = Map[Int, String]
+
   sealed trait FileState
   case object File extends FileState
   case object Dir extends FileState

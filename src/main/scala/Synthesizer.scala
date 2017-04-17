@@ -15,7 +15,7 @@ import SymbolicFSCompiler._
 object Synthesizer {
   import Implicits._
 
-  def synthesize(prog: F.Statement, constraints: Seq[Constraint]): Unit = {
+  def synthesize(prog: F.Statement, constraints: Seq[Constraint]): Option[Substitution] = {
     val progPaths = FSVisitors.collectPaths(prog)
     val constraintPaths = constraints.map(_.paths).reduce(_ ++ _)
     val basePaths = progPaths ++ constraintPaths ++ Settings.assumedDirs
@@ -120,17 +120,36 @@ case class Synthesizer(paths: Set[String], defaultFS: Map[String, FileState]) {
   )))
 
   /**
+    * Defining a procedure for parsing models into substitutions.
+    */
+
+  def parseModel(exprs: List[SExpr]): Substitution = {
+    def extractKey(str: String): Int = Integer.parseInt(
+      str.substring(str.indexOf('-') + 1)
+    )
+
+    exprs.flatMap {
+      case DefineFun(FunDef(SSymbol(str), Seq(), sort, body)) if str.startsWith("loc") => {
+        val key = extractKey(str)
+        body match {
+          case StringLit(str) => Some(key -> str)
+          case _ => None
+        }
+      }
+      case _ => None
+    }.toMap
+  }
+
+  /**
     * Defining the synthesis procedure.
     */
 
-  def synthesize(prog: F.Statement, constraints: Seq[Constraint]): Unit = {
+  def synthesize(prog: F.Statement, constraints: Seq[Constraint]): Option[Substitution] = {
     val initialFuns = (initialStateHuh, initialContainsHuh, initialModeHuh)
     val nextFuns = initialFuns.next
 
     val (commands, (lastStateHuh, lastContainsHuh, lastModeHuh)) =
       compileStatement(prog, True(), initialFuns, nextFuns)
-
-    println(commands)
 
     // Evaluate commands compiled from the program in the solver.
     commands.foreach {
@@ -183,9 +202,7 @@ case class Synthesizer(paths: Set[String], defaultFS: Map[String, FileState]) {
       }
     }
 
-    println(res)
-
     // Parse the maximal satisfying model into a substitution.
-    ???
+    res.map(parseModel)
   }
 }
