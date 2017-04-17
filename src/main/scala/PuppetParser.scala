@@ -24,7 +24,7 @@ private class PuppetParser extends RegexParsers with PackratParsers {
   lazy val dataType: P[String] = "" ~> "[A-Z][a-zA-Z]+".r
   lazy val variableName: P[String] =  "$" ~> "[a-z_(::)][a-zA-Z0-9_(::)]*[a-zA-Z0-9_]+|[a-z_(::)]".r
 
-  // Base constants 
+  // Base constants
   lazy val doubleQuotedString: P[String] = "\"" ~> "[^\"]*".r <~ "\""
   lazy val singleQuotedString: P[String] = "\'" ~> "[^\']*".r <~ "\'"
   lazy val number: P[Int] = "(-)?[0-9]+".r ^^ { n => Integer.parseInt(n) }
