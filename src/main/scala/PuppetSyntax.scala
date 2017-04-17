@@ -32,7 +32,18 @@ object PuppetSyntax {
   case class EBinOp(op: BinOp, lhs: Expr, rhs: Expr) extends Expr
 
   sealed trait Manifest {
+    lazy val labeled: Manifest = PuppetLabeler.label(this)
     lazy val compile: FSSyntax.Statement = PuppetCompiler.compileManifest(this)(Map() -> Map())._1
+
+    private var internalLabels: Seq[Int] = Seq()
+
+    def label(): Int = internalLabels(0)
+    def labels(): Seq[Int] = internalLabels
+    def setLabel(label: Int): Manifest = setLabels(Seq(label))
+    def setLabels(labels: Seq[Int]): Manifest = {
+      this.internalLabels = labels
+      this
+    }
   }
   case object MEmpty extends Manifest
   case class MAssign(id: String, expr: Expr, body: Manifest) extends Manifest

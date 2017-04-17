@@ -22,8 +22,9 @@ object Main extends App {
 
     Try({
       val manifest = PuppetParser.parseFile(fileName)
+      val labeledManifest = manifest.labeled
       val constraints = ConstraintParser.parse(constraintString)
-      val prog = manifest.compile
+      val prog = labeledManifest.compile
       println(prog.partialed.pretty)
       println()
       Synthesizer.synthesize(prog, constraints).get

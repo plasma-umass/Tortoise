@@ -20,14 +20,6 @@ object PuppetCompiler {
     s"$str!$num"
   }
 
-  var loc = 0
-  def freshLoc(): Int = {
-    loc += 1
-    loc
-  }
-
-  def nLocs(n: Int): Seq[Int] = 0.to(n).map(_ => freshLoc())
-
   def compileUnOp(op: P.UnOp): F.UnOp = op match {
     case P.UNot => F.UNot
     case P.UNeg => F.UNeg
@@ -118,13 +110,13 @@ object PuppetCompiler {
     case P.MEmpty => (skip, envs._2)
     case P.MAssign(id, value, body) => {
       val cmd =
-        let (s"$id" := compileExpr(value) or freshLoc()) {
+        let (s"$id" := compileExpr(value) or mani.label) {
           compileManifest(body)._1
         }
       (cmd, envs._2)
     }
     case P.MResource(typ, title, attrs) => (compileResource(typ, title, attrs), envs._2)
-    case P.MDefine(typ, args, body) => (skip, envs._2 + (typ -> (args, nLocs(args.length), body)))
+    case P.MDefine(typ, args, body) => (skip, envs._2 + (typ -> (args, mani.labels, body)))
     case P.MSeq(lhs, rhs) => {
       val (c1, renv1) = compileManifest(lhs)
       val (c2, renv2) = compileManifest(rhs)(envs._1 -> renv1)
