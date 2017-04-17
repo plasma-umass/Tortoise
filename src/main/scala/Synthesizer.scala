@@ -128,11 +128,23 @@ case class Synthesizer(paths: Set[String], defaultFS: Map[String, FileState]) {
       str.substring(str.indexOf('-') + 1)
     )
 
-    exprs.flatMap {
-      case DefineFun(FunDef(SSymbol(str), Seq(), sort, body)) if str.startsWith("loc") => {
+    val changedMap = exprs.flatMap {
+      case DefineFun(FunDef(SSymbol(str), Seq(), _, body)) if str.startsWith("unchanged") => {
         val key = extractKey(str)
         body match {
-          case StringLit(str) => Some(key -> str)
+          case NumeralLit(n) if n.intValue == 0 => Some(key -> true)
+          case NumeralLit(n) => Some(key -> false)
+          case _ => None
+        }
+      }
+      case _ => None
+    }.toMap
+
+    exprs.flatMap {
+      case DefineFun(FunDef(SSymbol(str), Seq(), _, body)) if str.startsWith("loc") => {
+        val key = extractKey(str)
+        body match {
+          case StringLit(str) if changedMap(key) => Some(key -> str)
           case _ => None
         }
       }
