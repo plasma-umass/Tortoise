@@ -173,7 +173,7 @@ case class Synthesizer(paths: Set[String], defaultFS: Map[String, FileState]) {
 
     // Collect labels from all let bindings and compute their sum under the solver.
     val labels = FSVisitors.collectLabels(prog)
-    val counts = labels.toSeq.map(label => s"count-$label".id)
+    val counts = labels.toSeq.map(label => s"unchanged-$label".id)
 
     val sum = SSymbol("sum")
     solver.eval(DeclareConst(sum, IntSort()))
