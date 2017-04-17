@@ -176,10 +176,18 @@ case class Synthesizer(paths: Set[String], defaultFS: Map[String, FileState]) {
       }
 
       // contents constraints deal with contains?
-      case ContentsConstraint(path, contents) => ???
+      case ContentsConstraint(path, contents) => {
+        val pathTerm = StringLit(path)
+        val contentsTerm = StringLit(contents)
+        solver.eval(Assert(Equals(lastContainsHuh(pathTerm), contentsTerm)))
+      }
 
       // mode constraints deal with mode?
-      case ModeConstraint(path, mode) => ???
+      case ModeConstraint(path, mode) => {
+        val pathTerm = StringLit(path)
+        val modeTerm = StringLit(mode)
+        solver.eval(Assert(Equals(lastModeHuh(pathTerm), modeTerm)))
+      }
     }
 
     // Collect labels from all let bindings and compute their sum under the solver.
