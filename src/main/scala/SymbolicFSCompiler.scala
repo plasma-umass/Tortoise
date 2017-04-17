@@ -245,7 +245,6 @@ object SymbolicFSCompiler {
       val varDef = DeclareConst(SSymbol(id), stringSort)
 
       val count = SSymbol(s"unchanged-$label")
-      val countDef = DeclareConst(count, intSort)
 
       // There's a couple ways to do this, and I'm not 100% certain this one is the correct one.
       val assert =
@@ -256,7 +255,7 @@ object SymbolicFSCompiler {
 
       val (bodyCmds, bodyFuns) = compileStatement(body, cond, prev, curr)
 
-      (holeDefs ++ Seq(varDef, countDef, assert) ++ bodyCmds, bodyFuns)
+      (holeDefs ++ Seq(varDef, assert) ++ bodyCmds, bodyFuns)
     }
 
     // let id = expr in body

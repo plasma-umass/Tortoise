@@ -159,6 +159,18 @@ case class Synthesizer(paths: Set[String], defaultFS: Map[String, FileState]) {
     val initialFuns = (initialStateHuh, initialContainsHuh, initialModeHuh)
     val nextFuns = initialFuns.next
 
+    // Collect labels from all let bindings and compute their sum under the solver.
+    val labels = FSVisitors.collectLabels(prog)
+    val counts = labels.toSeq.map(label => s"unchanged-$label".id)
+
+    labels.foreach {
+      label => solver.eval(DeclareConst(SSymbol(s"unchanged-$label"), IntSort()))
+    }
+
+    val sum = SSymbol("sum")
+    solver.eval(DeclareConst(sum, IntSort()))
+    solver.eval(Assert(Equals(sum.id, FunctionApplication("+".id, counts))))
+
     val (commands, (lastStateHuh, lastContainsHuh, lastModeHuh)) =
       compileStatement(prog, True(), initialFuns, nextFuns)
 
@@ -189,14 +201,6 @@ case class Synthesizer(paths: Set[String], defaultFS: Map[String, FileState]) {
         solver.eval(Assert(Equals(lastModeHuh(pathTerm), modeTerm)))
       }
     }
-
-    // Collect labels from all let bindings and compute their sum under the solver.
-    val labels = FSVisitors.collectLabels(prog)
-    val counts = labels.toSeq.map(label => s"unchanged-$label".id)
-
-    val sum = SSymbol("sum")
-    solver.eval(DeclareConst(sum, IntSort()))
-    solver.eval(Assert(Equals(sum.id, FunctionApplication("+".id, counts))))
 
     // Use binary search to find a satisfying model that maximizes the number of unchanged labels.
     var lo = 0
