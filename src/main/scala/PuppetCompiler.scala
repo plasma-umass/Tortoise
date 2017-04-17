@@ -9,7 +9,16 @@ import pup.FSEmbeddedDSL._
  * it should be fairly trivial given Rehearsal to convert manifests to this form.
  */
 object PuppetCompiler {
+  type IdEnv = Map[String, String]
   type ResEnv = Map[String, (P.Arguments, Seq[Int], P.Manifest)]
+  type Envs = (IdEnv, ResEnv)
+
+  var names: Map[String, Int] = Map()
+  def freshName(str: String): String = {
+    val num = names.getOrElse(str, 0) + 1
+    names += (str -> num)
+    s"$str!$num"
+  }
 
   var loc = 0
   def freshLoc(): Int = {
@@ -32,9 +41,12 @@ object PuppetCompiler {
     case P.BGt => F.BGt
   }
 
-  def compileExpr(expr: P.Expr): F.Expr = expr match {
+  def compileExpr(expr: P.Expr)(implicit envs: Envs): F.Expr = expr match {
     case P.EUndef => undef
-    case P.EVar(id) => $(id)
+    case P.EVar(id) => envs._1.get(id) match {
+      case Some(newId) => $(newId)
+      case None => $(id)
+    }
     case P.EConst(c) => F.EConst(c)
     case P.EStrInterp(terms) => terms.map(compileExpr).reduce[F.Expr]({
       case (lhs, rhs) => lhs + rhs
@@ -45,7 +57,7 @@ object PuppetCompiler {
 
   def compileResource(
     typ: String, title: P.Expr, attrs: P.Attributes
-  )(implicit renv: ResEnv): F.Statement = typ match {
+  )(implicit envs: Envs): F.Statement = typ match {
     // Handle special case for file resources.
     case "file" => {
       val attrMap = attrs.flatMap(P.Attribute.unapply).toMap
@@ -73,12 +85,27 @@ object PuppetCompiler {
 
     // This case corresponds to applying a define type.
     case _ => {
-      val attrMap = attrs.flatMap(P.Attribute.unapply).toMap
-      val (params, locs, body) = renv(typ)
-      params.zip(locs).foldRight(compileManifest(body)._1) {
-        case ((parameter, loc), body) => {
-          val param = parameter.vari.id
-          val arg = attrMap.get(param).map(compileExpr).getOrElse(undef)
+      val renv = envs._2
+      val (paramsOrig, locs, body) = renv(typ)
+
+      // Map parameters into fresh names (because of multiple instantiations).
+      val params = paramsOrig.map {
+        case P.Argument(P.EVar(id), _) => freshName(id)
+      }
+
+      // Update the environment with the new name bindings.
+      val updatedEnv = envs._1 ++ paramsOrig.map(_.vari.id).zip(params)
+
+      // Build the attribute mapping using the updated name environment.
+      val attrMap = attrs.flatMap(P.Attribute.unapply).map {
+        case (key, value) => updatedEnv(key) -> value
+      }.toMap
+
+      // Build the FS++ expression by adding a series of let bindings around the original body.
+      params.zip(locs).foldRight(compileManifest(body)(updatedEnv -> envs._2)._1) {
+        case ((param, loc), body) => {
+          val arg = attrMap.get(param).map(compileExpr(_)(updatedEnv -> envs._2)).getOrElse(undef)
+          println(param -> arg.pretty)
 
           let (s"$param" := arg or loc) {
             body
@@ -88,20 +115,20 @@ object PuppetCompiler {
     }
   }
 
-  def compileManifest(mani: P.Manifest)(implicit renv: ResEnv): (F.Statement, ResEnv) = mani match {
-    case P.MEmpty => (skip, renv)
+  def compileManifest(mani: P.Manifest)(implicit envs: Envs): (F.Statement, ResEnv) = mani match {
+    case P.MEmpty => (skip, envs._2)
     case P.MAssign(id, value, body) => {
       val cmd =
         let (s"$id" := compileExpr(value) or freshLoc()) {
           compileManifest(body)._1
         }
-      (cmd, renv)
+      (cmd, envs._2)
     }
-    case P.MResource(typ, title, attrs) => (compileResource(typ, title, attrs), renv)
-    case P.MDefine(typ, args, body) => (skip, renv + (typ -> (args, nLocs(args.length), body)))
+    case P.MResource(typ, title, attrs) => (compileResource(typ, title, attrs), envs._2)
+    case P.MDefine(typ, args, body) => (skip, envs._2 + (typ -> (args, nLocs(args.length), body)))
     case P.MSeq(lhs, rhs) => {
       val (c1, renv1) = compileManifest(lhs)
-      val (c2, renv2) = compileManifest(rhs)(renv1)
+      val (c2, renv2) = compileManifest(rhs)(envs._1 -> renv1)
       (c1 >> c2, renv2)
     }
     case P.MIf(pred, cons, alt) => {
@@ -111,7 +138,7 @@ object PuppetCompiler {
         } _else {
           compileManifest(alt)._1
         }
-      (cmd, renv)
+      (cmd, envs._2)
     }
   }
 }

@@ -32,7 +32,7 @@ object PuppetSyntax {
   case class EBinOp(op: BinOp, lhs: Expr, rhs: Expr) extends Expr
 
   sealed trait Manifest {
-    lazy val compile: FSSyntax.Statement = PuppetCompiler.compileManifest(this)(Map())._1
+    lazy val compile: FSSyntax.Statement = PuppetCompiler.compileManifest(this)(Map() -> Map())._1
   }
   case object MEmpty extends Manifest
   case class MAssign(id: String, expr: Expr, body: Manifest) extends Manifest
