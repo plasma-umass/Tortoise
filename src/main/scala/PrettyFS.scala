@@ -128,8 +128,6 @@ object PrettyFS extends ParenPrettyPrinter {
     case EUnOp(_, _) | EBinOp(_, _, _) => toParenDoc(convert(expr))
   }
 
-  def prettyExpr(expr: Expr): String = super.pretty(showExpr(expr)).layout
-
   def parindent(doc: Doc): Doc = lparen <@> indent(doc) <@> rparen
 
   def showStatement(stmt: Statement): Doc = stmt match {
@@ -158,5 +156,6 @@ object PrettyFS extends ParenPrettyPrinter {
         indent(showStatement(cons)) <@> "else" <@> indent(showStatement(alt))
   }
 
+  def prettyExpr(expr: Expr): String = super.pretty(showExpr(expr)).layout
   def prettyStatement(stmt: Statement): String = super.pretty(showStatement(stmt)).layout
 }
