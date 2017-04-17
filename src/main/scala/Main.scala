@@ -24,6 +24,8 @@ object Main extends App {
       val manifest = PuppetParser.parseFile(fileName)
       val constraints = ConstraintParser.parse(constraintString)
       val prog = manifest.compile
+      println(prog.partialed.pretty)
+      println()
       Synthesizer.synthesize(prog, constraints).get
     }) match {
       case Success(subst) => {
