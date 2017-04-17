@@ -1,7 +1,0 @@
-let path = </init>
-in let main = </vote>
-in mkdir(path);
-   if dir?(path)
-   then mkdir(main);
-        mkfile(main + </awe>, "yea")
-   else mkdir(main)
