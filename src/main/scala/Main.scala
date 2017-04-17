@@ -27,10 +27,17 @@ object Main extends App {
       val prog = labeledManifest.compile
       println(prog.partialed.pretty)
       println()
-      Synthesizer.synthesize(prog, constraints).get
+      Synthesizer.synthesize(prog, constraints).map {
+        subst => PuppetUpdater.update(labeledManifest, subst)
+      }
     }) match {
-      case Success(subst) => {
-        println(subst)
+      case Success(Some(result)) => {
+        println("Update synthesis was successful! The updated manifest is:")
+        println()
+        println(result)
+      }
+      case Success(None) => {
+        println("Failed to synthesize an update to the specified manifest given those constraints.")
       }
       case Failure(exn) => throw exn
     }

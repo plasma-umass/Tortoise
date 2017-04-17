@@ -11,3 +11,7 @@ case class ConfigError(msg: String) extends RuntimeException(msg)
 case class TypeError(found: String, expected: String) extends RuntimeException(
   s"A type error occurred during evaluation. Found: $found, expected: $expected."
 )
+
+case class UpdateError(expr: PuppetSyntax.Expr) extends RuntimeException(
+  s"Failed to apply substitution because the expression `$expr` could not be updated."
+)
