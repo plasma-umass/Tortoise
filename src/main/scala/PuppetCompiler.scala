@@ -105,7 +105,6 @@ object PuppetCompiler {
       params.zip(locs).foldRight(compileManifest(body)(updatedEnv -> envs._2)._1) {
         case ((param, loc), body) => {
           val arg = attrMap.get(param).map(compileExpr(_)(updatedEnv -> envs._2)).getOrElse(undef)
-          println(param -> arg.pretty)
 
           let (s"$param" := arg or loc) {
             body
