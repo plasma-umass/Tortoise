@@ -17,12 +17,12 @@ object Synthesizer {
 
   def synthesize(prog: F.Statement, constraints: Seq[Constraint]): Option[Substitution] = {
     val progPaths = FSVisitors.collectPaths(prog)
-    val constraintPaths = constraints.map(_.paths).reduce(_ ++ _)
+    val constraintPaths = constraints.map(_.paths).flatten
     val basePaths = progPaths ++ constraintPaths ++ Settings.assumedDirs
 
     // Compute all ancestors from each path.
     // NOTE: this may cause bugs because of the conversion to and from Path.
-    val paths = basePaths.map(_.ancestors).reduce(_ ++ _).map(_.toString)
+    val paths = basePaths.map(_.ancestors).flatten.map(_.toString)
 
     // Create the default file system representation.
     val defaultFS = Settings.assumedDirs.map((_, Dir)).toMap + ("/" -> Dir)
