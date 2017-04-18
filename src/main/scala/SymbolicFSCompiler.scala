@@ -242,7 +242,7 @@ object SymbolicFSCompiler {
       val exprTerm = compileExpr(expr)(prev._1.num)
       val variable = SSymbol(id)
 
-      val varDef = DeclareConst(SSymbol(id), stringSort)
+      val varDef = DeclareConst(variable, stringSort)
 
       val count = SSymbol(s"unchanged-$label")
 
@@ -263,12 +263,14 @@ object SymbolicFSCompiler {
       val exprTerm = compileExpr(expr)(prev._1.num)
       val variable = SSymbol(id)
 
+      val varDef = DeclareConst(variable, stringSort)
+
       val assert =
         Assert(Equals(variable.id, exprTerm))
 
       val (bodyCmds, bodyFuns) = compileStatement(body, cond, prev, curr)
 
-      (assert +: bodyCmds, bodyFuns)
+      (Seq(varDef, assert) ++ bodyCmds, bodyFuns)
     }
 
     // if pred then cons else alt
