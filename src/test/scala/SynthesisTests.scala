@@ -16,7 +16,7 @@ class SynthesisTests extends org.scalatest.FunSuite {
     }
   }
 
-  test("Update a single file resource") {
+  test("Update a single file resource.") {
     val manifest = PuppetParser.parse("""
       $x = "/foo"
       file {$x:
@@ -105,6 +105,32 @@ class SynthesisTests extends org.scalatest.FunSuite {
       f { x => $w }
       $v = "/baz"
       f { x => $v }
+    """)
+
+    synthesisAssert(manifest, constraints, expected)
+  }
+
+  test("Update the contents of a single file resource.") {
+    val manifest = PuppetParser.parse("""
+      $x = "/awe"
+      $y = "I like cats."
+      file {$x:
+        ensure => present,
+        content => $y
+      }
+    """)
+
+    val constraints = ConstraintParser.parse("""
+      "/awe" => "I like dogs."
+    """)
+
+    val expected = PuppetParser.parse("""
+      $x = "/awe"
+      $y = "I like dogs."
+      file {$x:
+        ensure => present,
+        content => $y
+      }
     """)
 
     synthesisAssert(manifest, constraints, expected)
