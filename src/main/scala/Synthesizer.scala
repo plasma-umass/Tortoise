@@ -197,65 +197,8 @@ case class Synthesizer(paths: Set[String], defaultFS: Map[String, FileState]) {
       }
     }
 
-    // Handle soft constraints to keep some notion of manifest similarity.
-    val softConstraints = FSEval.collectSoftConstraints(prog)
-    val softConstraintPairs = Stream.from(1).map(n => s"soft-$n").zip(softConstraints)
-
-    softConstraintPairs.foreach {
-      // state constraints deal with state?
-      case (name, StateConstraint(path, state)) => {
-        val pathTerm = StringLit(path)
-
-        val count = SSymbol(name)
-        solver.eval(DeclareConst(count, intSort))
-
-        solver.eval(Assert(
-          ITE(
-            Equals(lastStateHuh(pathTerm), compileFileState(state)),
-            Equals(count.id, NumeralLit(1)),
-            Equals(count.id, NumeralLit(0))
-          )
-        ))
-      }
-
-      // contents constraints deal with contains?
-      case (name, ContentsConstraint(path, contents)) => {
-        val pathTerm = StringLit(path)
-        val contentsTerm = StringLit(contents)
-
-        val count = SSymbol(name)
-        solver.eval(DeclareConst(count, intSort))
-
-        solver.eval(Assert(
-          ITE(
-            Equals(lastContainsHuh(pathTerm), contentsTerm),
-            Equals(count.id, NumeralLit(1)),
-            Equals(count.id, NumeralLit(0))
-          )
-        ))
-      }
-
-      // mode constraints deal with mode?
-      case (name, ModeConstraint(path, mode)) => {
-        val pathTerm = StringLit(path)
-        val modeTerm = StringLit(mode)
-
-        val count = SSymbol(name)
-        solver.eval(DeclareConst(count, intSort))
-
-        solver.eval(Assert(
-          ITE(
-            Equals(lastModeHuh(pathTerm), modeTerm),
-            Equals(count.id, NumeralLit(1)),
-            Equals(count.id, NumeralLit(0))
-          )
-        ))
-      }
-    }
-
-    // Define the sum to maximize in terms of counts and soft constraints.
-    val counts =
-      labels.toSeq.map(label => s"unchanged-$label".id) ++ softConstraintPairs.map(_._1.id)
+    // Define the sum to maximize in terms of counts of unchanged variables.
+    val counts = labels.toSeq.map(label => s"unchanged-$label".id)
     val sum = SSymbol("sum")
     solver.eval(DeclareConst(sum, IntSort()))
     solver.eval(Assert(Equals(sum.id, FunctionApplication("+".id, counts))))
