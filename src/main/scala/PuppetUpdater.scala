@@ -15,8 +15,10 @@ object PuppetUpdater {
   type LocEnv = Map[String, Int]
   case class UpdateContext(env: LocEnv, subst: Substitution) {
     def apply(str: String): String = subst(env(str))
+    def contains(str: String): Boolean = env.contains(str) && subst.contains(env(str))
 
     def +(pair: (String, Int)): UpdateContext = UpdateContext(env + pair, subst)
+    def ++(pairs: Seq[(String, Int)]): UpdateContext = UpdateContext(env ++ pairs, subst)
   }
 
   // Replaces an expression immediately based on a string (used for let bindings).
@@ -29,21 +31,31 @@ object PuppetUpdater {
   // Updates an expression under the specified update context (used for resource instantiations).
   def updateExpr(expr: Expr)(implicit cxt: UpdateContext): Expr = expr match {
     case EUndef | EConst(_) => expr
-    case EVar(id) => EConst(CStr(cxt(id)))
+    case EVar(id) if cxt.contains(id) => EConst(CStr(cxt(id)))
+    case EVar(_) => expr
     case EStrInterp(terms) => EStrInterp(terms.map(updateExpr))
     case EUnOp(op, operand) => EUnOp(op, updateExpr(operand))
     case EBinOp(op, lhs, rhs) => EBinOp(op, updateExpr(lhs), updateExpr(rhs))
   }
 
-  // FIXME: substitutions for resource instantiations
+  def updateAttribute(attr: Attribute)(implicit cxt: UpdateContext): Attribute = attr match {
+    case Attribute(name, value) => Attribute(name, updateExpr(value))
+  }
+
+  def updateAttributes(attrs: Attributes)(implicit cxt: UpdateContext): Attributes = {
+    attrs.map(updateAttribute)
+  }
+
   def updateManifest(mani: Manifest)(implicit cxt: UpdateContext): Manifest = mani match {
     case MEmpty => MEmpty
     case MAssign(id, expr, body) => cxt.subst.get(mani.label) match {
       case Some(replacement) => MAssign(id, replaceExpr(expr, replacement), updateManifest(body))
       case None => MAssign(id, expr, updateManifest(body))
     }
-    case MResource(_, _, _) => mani
-    case MDefine(typ, args, body) => MDefine(typ, args, updateManifest(body))
+    case MResource(typ, title, attrs) => MResource(typ, updateExpr(title), updateAttributes(attrs))
+    case MDefine(typ, args, body) => MDefine(
+      typ, args, updateManifest(body)(cxt ++ args.map(_.vari.id).zip(mani.labels))
+    )
     case MSeq(lhs, rhs) => MSeq(updateManifest(lhs), updateManifest(rhs))
     case MIf(pred, cons, alt) => MIf(pred, updateManifest(cons), updateManifest(alt))
   }
