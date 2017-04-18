@@ -60,11 +60,11 @@ object PuppetCompiler {
         directPath
       }
       val mode = attrMap.get("mode").map(compileExpr).getOrElse(undef)
-      val contents = attrMap.get("contents").map(compileExpr).getOrElse(undef)
+      val content = attrMap.get("content").map(compileExpr).getOrElse(undef)
       val ensure = attrMap.get("ensure").map(compileExpr).getOrElse(undef)
 
       _if (ensure =? "present") {
-        create(path, contents)
+        create(path, content)
       } .else_if (ensure =? "directory") {
         mkdir(path)
       } .else_if (ensure =? "absent") {
