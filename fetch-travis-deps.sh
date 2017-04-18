@@ -10,11 +10,11 @@ cd $HOME/mydeps
 
 if [ ! -x "/home/travis/mydeps/z3/bin/z3" ]; then
   echo "Fetching Z3 ..."
-  ZIPFILE=z3-4.4.1-x64-ubuntu-14.04.zip
-  URL=https://github.com/Z3Prover/z3/releases/download/z3-4.4.1/$ZIPFILE
+  ZIPFILE=z3-4.5.0-x64-ubuntu-14.04.zip
+  URL=https://github.com/Z3Prover/z3/releases/download/z3-4.5.0/$ZIPFILE
   wget $URL
   unzip $ZIPFILE
-  mv z3-4.4.1-x64-ubuntu-14.04 z3
+  mv z3-4.5.0-x64-ubuntu-14.04 z3
 fi
 
 if [ ! -x "/home/travis/mydeps/datalog-2.5/datalog" ]; then
