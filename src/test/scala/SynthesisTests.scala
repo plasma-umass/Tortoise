@@ -2,13 +2,17 @@ import pup._
 
 import PuppetSyntax._
 import SymbolicFS._
+import SynthTransformers._
 
 class SynthesisTests extends org.scalatest.FunSuite {
-  def synthesisAssert(manifest: Manifest, constraints: Seq[Constraint], expected: Manifest) {
+  def synthesisAssert(
+    manifest: Manifest, constraints: Seq[Constraint], expected: Manifest,
+    transformer: Transformer = identity
+  ) {
     val labeledManifest = manifest.labeled
     val prog = labeledManifest.compile
 
-    Synthesizer.synthesize(prog, constraints).map {
+    Synthesizer.synthesize(prog, constraints, transformer).map {
       subst => PuppetUpdater.update(labeledManifest, subst)
     } match {
       case Some(res) => assert(res == expected, s"\nThe constraints were:\n$constraints")
@@ -220,6 +224,6 @@ class SynthesisTests extends org.scalatest.FunSuite {
       vim { user => $user2 }
     """)
 
-    synthesisAssert(manifest, constraints, expected)
+    synthesisAssert(manifest, constraints, expected, doNotEditAbstractions)
   }
 }

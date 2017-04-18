@@ -8,14 +8,17 @@ import smtlib.parser.Terms._
 import smtlib.theories.Core._
 import smtlib.theories.Ints._
 import smtlib.theories.experimental.Strings._
-import pup.{FSSyntax => F}
+import pup.{FSSyntax => F, SynthTransformers => T}
 import SymbolicFS._
 import SymbolicFSCompiler._
 
 object Synthesizer {
   import Implicits._
 
-  def synthesize(prog: F.Statement, constraints: Seq[Constraint]): Option[Substitution] = {
+  def synthesize(
+    inProg: F.Statement, constraints: Seq[Constraint], transformer: T.Transformer = T.identity
+  ): Option[Substitution] = {
+    val prog = transformer(inProg)
     val progPaths = FSVisitors.collectPaths(prog)
     val constraintPaths = constraints.map(_.paths).flatten
     val basePaths = progPaths ++ constraintPaths ++ Settings.assumedDirs
