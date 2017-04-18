@@ -14,7 +14,7 @@ object PuppetLabeler {
 
   def label(mani: Manifest): Manifest = mani match {
     case MEmpty | MResource(_, _, _) => mani
-    case MAssign(_, _, _) => mani.setLabel(freshLoc())
+    case MAssign(id, expr, body) => MAssign(id, expr, label(body)).setLabel(freshLoc())
     case MDefine(typ, args, body) => MDefine(typ, args, label(body)).setLabels(nLocs(args.length))
     case MSeq(lhs, rhs) => MSeq(label(lhs), label(rhs))
     case MIf(pred, cons, alt) => MIf(pred, label(cons), label(alt))
