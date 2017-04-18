@@ -19,4 +19,12 @@ object SynthTransformers {
     case SLet(id, expr, index, body) => SLet(id, expr, index, doNotEditAbstractions(body))
     case SIf(pred, cons, alt) => SIf(pred, doNotEditAbstractions(cons), doNotEditAbstractions(alt))
   }
+
+  def onlyEditAbstractions(prog: Statement): Statement = prog match {
+    case SSkip | SMkdir(_) | SCreate(_, _) | SRm(_) | SCp(_, _) | SChmod(_, _) => prog
+    case SSeq(lhs, rhs) => SSeq(onlyEditAbstractions(lhs), onlyEditAbstractions(rhs))
+    case SLet(id, vari@EVar(_), index, body) => SLet(id, vari, index, onlyEditAbstractions(body))
+    case SLet(id, expr, _, body) => SLet(id, expr, None, onlyEditAbstractions(body))
+    case SIf(pred, cons, alt) => SIf(pred, onlyEditAbstractions(cons), onlyEditAbstractions(alt))
+  }
 }
