@@ -135,4 +135,87 @@ class SynthesisTests extends org.scalatest.FunSuite {
 
     synthesisAssert(manifest, constraints, expected)
   }
+
+  test("Update the contents and title of a single file resource.") {
+    val manifest = PuppetParser.parse("""
+      $x = "/awe"
+      $y = "I like dogs."
+      file {$x:
+        ensure => present,
+        content => $y
+      }
+    """)
+
+    val constraints = ConstraintParser.parse("""
+      "/awe" -> nil, "/rachit" => "I like cats."
+    """)
+
+    val expected = PuppetParser.parse("""
+      $x = "/rachit"
+      $y = "I like cats."
+      file {$x:
+        ensure => present,
+        content => $y
+      }
+    """)
+
+    synthesisAssert(manifest, constraints, expected)
+  }
+
+  test("Update a single instantiation of a complex resource.") {
+    val manifest = PuppetParser.parse("""
+      file {"/bin/vim":
+        ensure => present
+      }
+
+      define vim($user) {
+        file {"/etc/users/$user":
+          ensure => present
+        }
+
+        file {"/home/$user":
+          ensure => directory
+        }
+
+        file {"/home/$user/.vimrc":
+          ensure => present,
+          content => "set syntax=on"
+        }
+      }
+
+      vim { user => "arjun" }
+      vim { user => "awe" }
+    """)
+
+    val constraints = ConstraintParser.parse("""
+      "/etc/users/arjun" -> nil, "/home/arjun" -> nil, "/home/arjun/.vimrc" -> nil,
+      "/etc/users/rachit" -> file, "/home/rachit" -> dir, "/home/rachit/.vimrc" -> file
+    """)
+
+    val expected = PuppetParser.parse("""
+      file {"/bin/vim":
+        ensure => present
+      }
+
+      define vim($user) {
+        file {"/etc/users/$user":
+          ensure => present
+        }
+
+        file {"/home/$user":
+          ensure => directory
+        }
+
+        file {"/home/$user/.vimrc":
+          ensure => present,
+          content => "set syntax=on"
+        }
+      }
+
+      vim { user => "rachit" }
+      vim { user => "awe" }
+    """)
+
+    synthesisAssert(manifest, constraints, expected)
+  }
 }
