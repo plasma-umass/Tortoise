@@ -4,7 +4,7 @@
 
 1. Oracle JDK 8.
 
-2. [Microsoft Z3 Theorem Prover 4.4.1](https://github.com/Z3Prover/z3/releases/tag/z3-4.4.1)
+2. [Microsoft Z3 Theorem Prover 4.5.0](https://github.com/Z3Prover/z3/releases/tag/z3-4.5.0)
 
    After installation, place the `z3` executable in your `PATH`.
 
