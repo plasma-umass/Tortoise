@@ -38,6 +38,7 @@ libraryDependencies ++=
       "org.slf4j" % "slf4j-simple" % "1.7.12")
 
 testOptions in Test += Tests.Argument("-oD")
+logBuffered in Test := false
 
 assemblyJarName in assembly := "pup.jar"
 test in assembly := {}
