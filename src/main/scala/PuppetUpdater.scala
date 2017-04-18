@@ -40,7 +40,7 @@ object PuppetUpdater {
     case MEmpty => MEmpty
     case MAssign(id, expr, body) => cxt.subst.get(mani.label) match {
       case Some(replacement) => MAssign(id, replaceExpr(expr, replacement), updateManifest(body))
-      case None => mani
+      case None => MAssign(id, expr, updateManifest(body))
     }
     case MResource(_, _, _) => mani
     case MDefine(typ, args, body) => MDefine(typ, args, updateManifest(body))
