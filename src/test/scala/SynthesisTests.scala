@@ -226,4 +226,46 @@ class SynthesisTests extends org.scalatest.FunSuite {
 
     synthesisAssert(manifest, constraints, expected, doNotEditAbstractions)
   }
+
+  test("Update the body of a define type.") {
+    val manifest = PuppetParser.parse("""
+      define g($y) {
+        file {$y:
+          ensure => directory
+        }
+      }
+
+      define f($x) {
+        g { y => $x }
+      }
+
+      $w = "/foo"
+      f { x => $w }
+      $v = "/baz"
+      f { x => $v }
+    """)
+
+    val constraints = ConstraintParser.parse("""
+      "/foo" -> nil, "/bar" -> dir
+    """)
+
+    val expected = PuppetParser.parse("""
+      define g($y) {
+        file {$y:
+          ensure => directory
+        }
+      }
+
+      define f($x) {
+        g { y => "/bar" }
+      }
+
+      $w = "/foo"
+      f { x => $w }
+      $v = "/baz"
+      f { x => $v }
+    """)
+
+    synthesisAssert(manifest, constraints, expected, onlyEditAbstractions)
+  }
 }
