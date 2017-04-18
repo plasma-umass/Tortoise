@@ -22,17 +22,16 @@ object Main extends App {
 
     Try({
       val manifest = PuppetParser.parseFile(fileName)
+      println(s"Original manifest:\n\n${manifest.pretty}\n")
       val labeledManifest = manifest.labeled
       val constraints = ConstraintParser.parse(constraintString)
       val prog = labeledManifest.compile
-      println(prog.partialed.pretty)
-      println()
       Synthesizer.synthesize(prog, constraints).map {
         subst => PuppetUpdater.update(labeledManifest, subst)
       }
     }) match {
       case Success(Some(result)) => {
-        println("Update synthesis was successful! The updated manifest is:")
+        println("Update synthesis was successful!\nThe updated manifest is:")
         println()
         println(result.pretty)
       }
