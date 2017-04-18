@@ -15,3 +15,5 @@ case class TypeError(found: String, expected: String) extends RuntimeException(
 case class UpdateError(expr: PuppetSyntax.Expr) extends RuntimeException(
   s"Failed to apply substitution because the expression `$expr` could not be updated."
 )
+
+case class EvalError(msg: String) extends RuntimeException(msg)

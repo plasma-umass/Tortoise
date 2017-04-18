@@ -183,8 +183,10 @@ class SynthesisTests extends org.scalatest.FunSuite {
         }
       }
 
-      vim { user => "arjun" }
-      vim { user => "awe" }
+      $user1 = "arjun"
+      vim { user => $user1 }
+      $user2 = "awe"
+      vim { user => $user2 }
     """)
 
     val constraints = ConstraintParser.parse("""
@@ -212,8 +214,10 @@ class SynthesisTests extends org.scalatest.FunSuite {
         }
       }
 
-      vim { user => "rachit" }
-      vim { user => "awe" }
+      $user1 = "rachit"
+      vim { user => $user1 }
+      $user2 = "awe"
+      vim { user => $user2 }
     """)
 
     synthesisAssert(manifest, constraints, expected)
