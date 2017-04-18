@@ -34,7 +34,7 @@ object Main extends App {
       case Success(Some(result)) => {
         println("Update synthesis was successful! The updated manifest is:")
         println()
-        println(result)
+        println(result.pretty)
       }
       case Success(None) => {
         println("Failed to synthesize an update to the specified manifest given those constraints.")

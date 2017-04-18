@@ -22,7 +22,10 @@ object PuppetSyntax {
   case object BLt extends BinOp
   case object BGt extends BinOp
 
-  sealed trait Expr
+  sealed trait Expr {
+    lazy val pretty: String = PrettyPuppet.prettyExpr(this)
+  }
+
   type Exprs = Seq[Expr]
   case object EUndef extends Expr
   case class EVar(id: String) extends Expr
@@ -32,6 +35,7 @@ object PuppetSyntax {
   case class EBinOp(op: BinOp, lhs: Expr, rhs: Expr) extends Expr
 
   sealed trait Manifest {
+    lazy val pretty: String = PrettyPuppet.prettyManifest(this)
     lazy val labeled: Manifest = PuppetLabeler.label(this)
     lazy val compile: FSSyntax.Statement = PuppetCompiler.compileManifest(this)(Map() -> Map())._1
 
