@@ -3,7 +3,6 @@ package pup
 import PuppetSyntax._
 
 object PuppetLabeler {
-
   var loc = 0
   def freshLoc(): Int = {
     loc += 1
