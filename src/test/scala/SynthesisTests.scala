@@ -29,6 +29,7 @@ class SynthesisTests extends org.scalatest.FunSuite {
       }
     """)
 
+    // mv /foo /bar
     val constraints = ConstraintParser.parse("""
       "/foo" -> nil, "/bar" -> dir
     """)
@@ -55,6 +56,7 @@ class SynthesisTests extends org.scalatest.FunSuite {
       f { x => $y }
     """)
 
+    // mv /foo /bar
     val constraints = ConstraintParser.parse("""
       "/foo" -> nil, "/bar" -> dir
     """)
@@ -91,6 +93,7 @@ class SynthesisTests extends org.scalatest.FunSuite {
       f { x => $v }
     """)
 
+    // mv /foo /bar
     val constraints = ConstraintParser.parse("""
       "/foo" -> nil, "/bar" -> dir
     """)
@@ -125,6 +128,7 @@ class SynthesisTests extends org.scalatest.FunSuite {
       }
     """)
 
+    // echo "I like cats." > /awe
     val constraints = ConstraintParser.parse("""
       "/awe" => "I like dogs."
     """)
@@ -151,6 +155,8 @@ class SynthesisTests extends org.scalatest.FunSuite {
       }
     """)
 
+    // rm /awe
+    // echo "I like cats." > /rachit
     val constraints = ConstraintParser.parse("""
       "/awe" -> nil, "/rachit" => "I like cats."
     """)
@@ -194,6 +200,9 @@ class SynthesisTests extends org.scalatest.FunSuite {
       vim { user => $user2 }
     """)
 
+    // userdel arjun
+    // useradd -m rachit
+    // echo "set syntax=on" > /home/rachit/.vimrc
     val constraints = ConstraintParser.parse("""
       "/etc/users/arjun" -> nil, "/home/arjun" -> nil, "/home/arjun/.vimrc" -> nil,
       "/etc/users/rachit" -> file, "/home/rachit" -> dir, "/home/rachit/.vimrc" -> file
@@ -246,6 +255,7 @@ class SynthesisTests extends org.scalatest.FunSuite {
       f { x => $v }
     """)
 
+    // mv /foo /bar
     val constraints = ConstraintParser.parse("""
       "/foo" -> nil, "/bar" -> dir
     """)
@@ -301,6 +311,8 @@ class SynthesisTests extends org.scalatest.FunSuite {
       }
     """)
 
+    // rm /awe
+    // echo "I like cats." > /rachit
     val constraints = ConstraintParser.parse("""
       "/awe" -> nil, "/rachit" => "I like cats."
     """)
@@ -358,6 +370,8 @@ class SynthesisTests extends org.scalatest.FunSuite {
       }
     """)
 
+    // rm /awe
+    // echo "I like cats." > /rachit
     val constraints = ConstraintParser.parse("""
       "/awe" -> nil, "/rachit" => "I like cats."
     """)
@@ -399,6 +413,8 @@ class SynthesisTests extends org.scalatest.FunSuite {
       }
     """)
 
+    // rm /awe
+    // mkdir /rachit
     val constraints = ConstraintParser.parse("""
       "/awe" -> nil, "/rachit" -> dir
     """)
