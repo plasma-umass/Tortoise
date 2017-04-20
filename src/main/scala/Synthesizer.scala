@@ -25,7 +25,7 @@ object Synthesizer {
 
     // Compute all ancestors from each path.
     // NOTE: this may cause bugs because of the conversion to and from Path.
-    val paths = basePaths.map(_.ancestors).flatten.map(_.toString)
+    val paths = basePaths.map(_.ancestors).flatten
 
     // Create the default file system representation.
     val defaultFS = Settings.assumedDirs.map((_, Dir)).toMap + ("/" -> Dir)

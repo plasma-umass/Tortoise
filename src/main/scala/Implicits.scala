@@ -8,7 +8,7 @@ object Implicits {
   implicit def stringToPath(str: String): Path = Paths.get(str)
 
   implicit class RichString(path: String) {
-    def ancestors(): Set[Path] = Paths.get(path).ancestors
+    def ancestors(): Set[String] = Paths.get(path).ancestors.map(_.toString)
   }
 
   implicit class RichPath(path: Path) {
@@ -21,7 +21,7 @@ object Implicits {
         }
       }
 
-      loop(path.getParent(), Set())
+      loop(path.getParent(), Set(path))
     }
   }
 }
