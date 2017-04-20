@@ -44,6 +44,33 @@ class SynthesisTests extends org.scalatest.FunSuite {
     synthesisAssert(manifest, constraints, expected)
   }
 
+  test("Update mode on a single file resource.") {
+    val manifest = PuppetParser.parse("""
+      $x = "/foo"
+      $mode = "644"
+      file {$x:
+        ensure => directory,
+        mode => $mode
+      }
+    """)
+
+    // chmod 644 /foo
+    val constraints = ConstraintParser.parse("""
+      "/foo" ~> 600
+    """)
+
+    val expected = PuppetParser.parse("""
+      $x = "/foo"
+      $mode = "600"
+      file {$x:
+        ensure => directory,
+        mode => $mode
+      }
+    """)
+
+    synthesisAssert(manifest, constraints, expected)
+  }
+
   test("Update a single file resource in a define type.") {
     val manifest = PuppetParser.parse("""
       define f($x) {
