@@ -46,6 +46,7 @@ object SynthTransformers {
   def doNotEditPaths(paths: Set[String])(prog: Statement): Statement = prog match {
     case SSkip | SMkdir(_) | SCreate(_, _) | SRm(_) | SCp(_, _) | SChmod(_, _) => prog
     case SSeq(lhs, rhs) => SSeq(doNotEditPaths(paths)(lhs), doNotEditPaths(paths)(rhs))
+    case SLet(id, vari@EVar(_), _, body) => SLet(id, vari, None, doNotEditPaths(paths)(body))
     case SLet(id, EConst(CStr(path)), _, body) if paths.contains(path) => {
       SLet(id, EConst(CStr(path)), None, doNotEditPaths(paths)(body))
     }
