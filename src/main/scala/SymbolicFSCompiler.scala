@@ -28,7 +28,7 @@ object SymbolicFSCompiler {
     case F.UNeg => Neg(operand)
     case F.UFile => Equals(stateHuh(operand), file)
     case F.UDir => Equals(stateHuh(operand), file)
-    case F.UDefined => Equals(operand, undef)
+    case F.UDefined => Not(Equals(operand, undef))
   }
 
   def compileBinOp(op: F.BinOp, lhs: Term, rhs: Term)(implicit st: State): Term = op match {
