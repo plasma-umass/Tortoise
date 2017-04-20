@@ -380,7 +380,7 @@ class SynthesisTests extends org.scalatest.FunSuite {
     synthesisAssert(manifest, constraints, expected)
   }
 
-  test("Update the contents and title of a single file resource in a complex if statement") {
+  test("Update the a single file resource in a complex if statement") {
     val manifest = PuppetParser.parse("""
       $flag = "file"
       $x = "/awe"
