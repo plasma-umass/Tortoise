@@ -341,4 +341,86 @@ class SynthesisTests extends org.scalatest.FunSuite {
 
     synthesisAssert(manifest, constraints, expected, doNotEditPaths(paths))
   }
+
+  test("Update the contents and title of a single file resource in an if statement") {
+    val manifest = PuppetParser.parse("""
+      $x = "/awe"
+      $y = "I like dogs."
+      if (true) {
+        file {$x:
+          ensure => present,
+          content => $y
+        }
+      } else {
+        file {$x:
+          ensure => directory
+        }
+      }
+    """)
+
+    val constraints = ConstraintParser.parse("""
+      "/awe" -> nil, "/rachit" => "I like cats."
+    """)
+
+    val expected = PuppetParser.parse("""
+      $x = "/rachit"
+      $y = "I like cats."
+      if (true) {
+        file {$x:
+          ensure => present,
+          content => $y
+        }
+      } else {
+        file {$x:
+          ensure => directory
+        }
+      }
+    """)
+
+    synthesisAssert(manifest, constraints, expected)
+  }
+
+  test("Update the contents and title of a single file resource in a complex if statement") {
+    val manifest = PuppetParser.parse("""
+      $flag = "file"
+      $x = "/awe"
+      $y = "I like dogs."
+      if ($flag == "file") {
+        file {$x:
+          ensure => present,
+          content => $y
+        }
+      } else {
+        if ($flag == "dir") {
+          file {$x:
+            ensure => directory
+          }
+        }
+      }
+    """)
+
+    val constraints = ConstraintParser.parse("""
+      "/awe" -> nil, "/rachit" -> dir
+    """)
+
+    val expected = PuppetParser.parse("""
+      $flag = "dir"
+      $x = "/rachit"
+      $y = "I like dogs."
+      if ($flag == "file") {
+        file {$x:
+          ensure => present,
+          content => $y
+        }
+      } else {
+        if ($flag == "dir") {
+          file {$x:
+            ensure => directory
+          }
+        }
+      }
+    """)
+
+    synthesisAssert(manifest, constraints, expected)
+  }
 }
