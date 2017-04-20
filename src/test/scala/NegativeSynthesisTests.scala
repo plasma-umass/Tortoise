@@ -60,6 +60,8 @@ class NegativeSynthesisTests extends org.scalatest.FunSuite {
       }
     """)
 
+    // rm /awe
+    // echo "I like cats." > /rachit
     val constraints = ConstraintParser.parse("""
       "/awe" -> nil, "/rachit" => "I like cats."
     """)
@@ -67,5 +69,32 @@ class NegativeSynthesisTests extends org.scalatest.FunSuite {
     val constraintPaths = constraints.flatMap(_.paths.flatMap(_.ancestors)).toSet
 
     synthesisAssert(manifest, constraints, onlyEditPaths(constraintPaths))
+  }
+
+  test("Attempt to update the body of a define type with over-constraints.") {
+    val manifest = PuppetParser.parse("""
+      define g($y) {
+        file {$y:
+          ensure => directory
+        }
+      }
+
+      define f($x) {
+        g { y => $x }
+      }
+
+      $w = "/foo"
+      f { x => $w }
+      $v = "/baz"
+      f { x => $v }
+    """)
+
+    // mv /foo /bar
+    // mkdir /baz
+    val constraints = ConstraintParser.parse("""
+      "/foo" -> nil, "/bar" -> dir, "/baz" -> dir
+    """)
+
+    synthesisAssert(manifest, constraints, onlyEditAbstractions)
   }
 }
