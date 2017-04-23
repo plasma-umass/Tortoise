@@ -1,5 +1,9 @@
 package pup
 
+case object Unreachable extends RuntimeException(
+  s"This point should be unreachable!"
+)
+
 case class ParseError(msg: String) extends RuntimeException(msg)
 
 case class MisusedEDSL[A](example: A) extends RuntimeException(
@@ -15,3 +19,5 @@ case class TypeError(found: String, expected: String) extends RuntimeException(
 case class UpdateError(expr: PuppetSyntax.Expr) extends RuntimeException(
   s"Failed to apply substitution because the expression `$expr` could not be updated."
 )
+
+case class EvalError(msg: String) extends RuntimeException(msg)

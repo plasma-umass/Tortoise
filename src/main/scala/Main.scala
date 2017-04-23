@@ -16,6 +16,11 @@ object Main extends App {
     System.exit(1)
   }
 
+  def shell(config: Config): Unit = {
+    val fileName = config.string("filename")
+    PupShell(fileName).start()
+  }
+
   def synthesize(config: Config): Unit = {
     val fileName = config.string("filename")
     val constraintString = config.string("constraints")
@@ -62,6 +67,11 @@ object Main extends App {
       .action((_, c) => c.copy(command = synthesize))
       .text("Synthesize an update to the specified Puppet manifest.")
       .children(string("filename"), string("constraints"))
+
+    cmd("shell")
+      .action((_, c) => c.copy(command = shell))
+      .text("Starts a simulated shell for updating the specified Puppet manifest.")
+      .children(string("filename"))
   }
 
   parser.parse(args, Config(usage, Map(), Map(), Map())) match {
