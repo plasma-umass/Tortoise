@@ -1,0 +1,2 @@
+#!/usr/bin/env sh
+rlwrap sbt "run shell --filename $1"
