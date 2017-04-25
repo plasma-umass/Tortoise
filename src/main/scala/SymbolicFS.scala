@@ -23,19 +23,21 @@ object SymbolicFS {
       case StateConstraint(path, _) => Set(path)
       case ContentsConstraint(path, _) => Set(path)
       case ModeConstraint(path, _) => Set(path)
+      case OwnerConstraint(path, _) => Set(path)
     }
   }
 
   case class StateConstraint(path: String, state: FileState) extends Constraint
   case class ContentsConstraint(path: String, contents: String) extends Constraint
   case class ModeConstraint(path: String, mode: String) extends Constraint
+  case class OwnerConstraint(path: String, owner: String) extends Constraint
 
   /**
     * Type definitions for compiler use
     */
 
   type Commands = Seq[Command]
-  type Funs = (FunName, FunName, FunName)
+  type Funs = (FunName, FunName, FunName, FunName)
   type State = Integer
 
   case class FunName(name: String, num: State) {
@@ -52,7 +54,7 @@ object SymbolicFS {
 
   implicit class RichFuns(funs: Funs) {
     def next(): Funs = funs match {
-      case (fun1, fun2, fun3) => (fun1.next, fun2.next, fun3.next)
+      case (fun1, fun2, fun3, fun4) => (fun1.next, fun2.next, fun3.next, fun4.next)
     }
   }
 
@@ -75,6 +77,7 @@ object SymbolicFS {
   val file = "File".id
   val dir = "Dir".id
   val nil = "Null".id
+  val defaultOwner = StringLit("root") // root is the default owner in Puppet.
   val defaultMode = StringLit("644") // FIXME: what is the default mode?
   val undef = StringLit("undef")
   val stateSort = Sort(SimpleIdentifier(SSymbol("State")))

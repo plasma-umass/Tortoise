@@ -57,8 +57,8 @@ object SymbolicFSCompiler {
     // mkdir(p)
     case F.SMkdir(path) => {
       val pathTerm = compileExpr(path)(prev._1.num)
-      val (lastStateHuh, lastContainsHuh, lastModeHuh) = prev
-      val (currStateHuh, currContainsHuh, currModeHuh) = curr
+      val (lastStateHuh, lastContainsHuh, lastModeHuh, lastOwnerHuh) = prev
+      val (currStateHuh, currContainsHuh, currModeHuh, currOwnerHuh) = curr
 
       val stateHuhDef =
         DefineFun(FunDef(currStateHuh.sym, Seq(SortedVar(SSymbol("p"), stringSort)), stateSort,
@@ -87,15 +87,24 @@ object SymbolicFSCompiler {
           )
         ))
 
-      (Seq(stateHuhDef, containsHuhDef, modeHuhDef), curr)
+      val ownerHuhDef =
+        DefineFun(FunDef(currOwnerHuh.sym, Seq(SortedVar(SSymbol("p"), stringSort)), stringSort,
+          ITE(
+            Equals("p".id, pathTerm),
+            defaultOwner,
+            lastOwnerHuh("p".id)
+          )
+        ))
+
+      (Seq(stateHuhDef, containsHuhDef, modeHuhDef, ownerHuhDef), curr)
     }
 
     // create(p, c)
     case F.SCreate(path, contents) => {
       val pathTerm = compileExpr(path)(prev._1.num)
       val contentsTerm = compileExpr(contents)(prev._1.num)
-      val (lastStateHuh, lastContainsHuh, lastModeHuh) = prev
-      val (currStateHuh, currContainsHuh, currModeHuh) = curr
+      val (lastStateHuh, lastContainsHuh, lastModeHuh, lastOwnerHuh) = prev
+      val (currStateHuh, currContainsHuh, currModeHuh, currOwnerHuh) = curr
 
       val stateHuhDef =
         DefineFun(FunDef(currStateHuh.sym, Seq(SortedVar(SSymbol("p"), stringSort)), stateSort,
@@ -124,14 +133,23 @@ object SymbolicFSCompiler {
           )
         ))
 
-      (Seq(stateHuhDef, containsHuhDef, modeHuhDef), curr)
+      val ownerHuhDef =
+        DefineFun(FunDef(currOwnerHuh.sym, Seq(SortedVar(SSymbol("p"), stringSort)), stringSort,
+          ITE(
+            Equals("p".id, pathTerm),
+            defaultOwner,
+            lastOwnerHuh("p".id)
+          )
+        ))
+
+      (Seq(stateHuhDef, containsHuhDef, modeHuhDef, ownerHuhDef), curr)
     }
 
     // rm(p)
     case F.SRm(path) => {
       val pathTerm = compileExpr(path)(prev._1.num)
-      val (lastStateHuh, lastContainsHuh, lastModeHuh) = prev
-      val (currStateHuh, currContainsHuh, currModeHuh) = curr
+      val (lastStateHuh, lastContainsHuh, lastModeHuh, lastOwnerHuh) = prev
+      val (currStateHuh, currContainsHuh, currModeHuh, currOwnerHuh) = curr
 
       val stateHuhDef =
         DefineFun(FunDef(currStateHuh.sym, Seq(SortedVar(SSymbol("p"), stringSort)), stateSort,
@@ -160,15 +178,24 @@ object SymbolicFSCompiler {
           )
         ))
 
-      (Seq(stateHuhDef, containsHuhDef, modeHuhDef), curr)
+      val ownerHuhDef =
+        DefineFun(FunDef(currOwnerHuh.sym, Seq(SortedVar(SSymbol("p"), stringSort)), stringSort,
+          ITE(
+            Equals("p".id, pathTerm),
+            defaultOwner,
+            lastOwnerHuh("p".id)
+          )
+        ))
+
+      (Seq(stateHuhDef, containsHuhDef, modeHuhDef, ownerHuhDef), curr)
     }
 
-    // cp(p)
+    // cp(src, dst)
     case F.SCp(src, dst) => {
       val srcTerm = compileExpr(src)(prev._1.num)
       val dstTerm = compileExpr(dst)(prev._1.num)
-      val (lastStateHuh, lastContainsHuh, lastModeHuh) = prev
-      val (currStateHuh, currContainsHuh, currModeHuh) = curr
+      val (lastStateHuh, lastContainsHuh, lastModeHuh, lastOwnerHuh) = prev
+      val (currStateHuh, currContainsHuh, currModeHuh, currOwnerHuh) = curr
 
       val stateHuhDef =
         DefineFun(FunDef(currStateHuh.sym, Seq(SortedVar(SSymbol("p"), stringSort)), stateSort,
@@ -197,15 +224,24 @@ object SymbolicFSCompiler {
           )
         ))
 
-      (Seq(stateHuhDef, containsHuhDef, modeHuhDef), curr)
+      val ownerHuhDef =
+        DefineFun(FunDef(currOwnerHuh.sym, Seq(SortedVar(SSymbol("p"), stringSort)), stringSort,
+          ITE(
+            Equals("p".id, dstTerm),
+            lastOwnerHuh(srcTerm),
+            lastOwnerHuh("p".id)
+          )
+        ))
+
+      (Seq(stateHuhDef, containsHuhDef, modeHuhDef, ownerHuhDef), curr)
     }
 
-    // chmod(p)
+    // chmod(p, mode)
     case F.SChmod(path, mode) => {
       val pathTerm = compileExpr(path)(prev._1.num)
       val modeTerm = compileExpr(mode)(prev._1.num)
-      val (lastStateHuh, lastContainsHuh, lastModeHuh) = prev
-      val (currStateHuh, currContainsHuh, currModeHuh) = curr
+      val (lastStateHuh, lastContainsHuh, lastModeHuh, lastOwnerHuh) = prev
+      val (currStateHuh, currContainsHuh, currModeHuh, currOwnerHuh) = curr
 
       val stateHuhDef =
         DefineFun(FunDef(currStateHuh.sym, Seq(SortedVar(SSymbol("p"), stringSort)), stateSort,
@@ -226,7 +262,46 @@ object SymbolicFSCompiler {
           )
         ))
 
-      (Seq(stateHuhDef, containsHuhDef, modeHuhDef), curr)
+      val ownerHuhDef =
+        DefineFun(FunDef(currOwnerHuh.sym, Seq(SortedVar(SSymbol("p"), stringSort)), stringSort,
+          lastOwnerHuh("p".id)
+        ))
+
+      (Seq(stateHuhDef, containsHuhDef, modeHuhDef, ownerHuhDef), curr)
+    }
+
+    // chmod(p, o)
+    case F.SChown(path, owner) => {
+      val pathTerm = compileExpr(path)(prev._1.num)
+      val ownerTerm = compileExpr(owner)(prev._1.num)
+      val (lastStateHuh, lastContainsHuh, lastModeHuh, lastOwnerHuh) = prev
+      val (currStateHuh, currContainsHuh, currModeHuh, currOwnerHuh) = curr
+
+      val stateHuhDef =
+        DefineFun(FunDef(currStateHuh.sym, Seq(SortedVar(SSymbol("p"), stringSort)), stateSort,
+          lastStateHuh("p".id)
+        ))
+
+      val containsHuhDef =
+        DefineFun(FunDef(currContainsHuh.sym, Seq(SortedVar(SSymbol("p"), stringSort)), stringSort,
+          lastContainsHuh("p".id)
+        ))
+
+      val modeHuhDef =
+        DefineFun(FunDef(currModeHuh.sym, Seq(SortedVar(SSymbol("p"), stringSort)), stringSort,
+          lastModeHuh("p".id)
+        ))
+
+      val ownerHuhDef =
+        DefineFun(FunDef(currOwnerHuh.sym, Seq(SortedVar(SSymbol("p"), stringSort)), stringSort,
+            ITE(
+              Equals("p".id, pathTerm),
+              ownerTerm,
+              lastOwnerHuh("p".id)
+            )
+        ))
+
+      (Seq(stateHuhDef, containsHuhDef, modeHuhDef, ownerHuhDef), curr)
     }
 
     // lhs; rhs
@@ -276,15 +351,15 @@ object SymbolicFSCompiler {
     // if pred then cons else alt
     case F.SIf(pred, cons, alt) => {
       val predTerm = compileExpr(pred)(prev._1.num)
-      val (currStateHuh, currContainsHuh, currModeHuh) = curr
+      val (currStateHuh, currContainsHuh, currModeHuh, currOwnerHuh) = curr
 
-      val consFuns = (currStateHuh.cons, currContainsHuh.cons, currModeHuh.cons)
-      val altFuns = (currStateHuh.alt, currContainsHuh.alt, currModeHuh.alt)
+      val consFuns = (currStateHuh.cons, currContainsHuh.cons, currModeHuh.cons, currOwnerHuh.cons)
+      val altFuns = (currStateHuh.alt, currContainsHuh.alt, currModeHuh.alt, currOwnerHuh.alt)
 
-      val (consCmds, (consStateHuh, consContainsHuh, consModeHuh)) =
+      val (consCmds, (consStateHuh, consContainsHuh, consModeHuh, consOwnerHuh)) =
         compileStatement(cons, And(cond, predTerm), prev, consFuns)
 
-      val (altCmds, (altStateHuh, altContainsHuh, altModeHuh)) =
+      val (altCmds, (altStateHuh, altContainsHuh, altModeHuh, altOwnerHuh)) =
         compileStatement(alt, And(cond, Not(predTerm)), prev, altFuns)
 
       val stateHuhDef =
@@ -314,7 +389,16 @@ object SymbolicFSCompiler {
           )
         ))
 
-      (consCmds ++ altCmds ++ Seq(stateHuhDef, containsHuhDef, modeHuhDef), curr)
+      val ownerHuhDef =
+        DefineFun(FunDef(currOwnerHuh.sym, Seq(SortedVar(SSymbol("p"), stringSort)), stringSort,
+          ITE(
+            predTerm,
+            consOwnerHuh("p".id),
+            altOwnerHuh("p".id)
+          )
+        ))
+
+      (consCmds ++ altCmds ++ Seq(stateHuhDef, containsHuhDef, modeHuhDef, ownerHuhDef), curr)
     }
   }
 }

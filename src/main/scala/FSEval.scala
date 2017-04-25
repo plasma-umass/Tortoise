@@ -119,6 +119,7 @@ object FSEval {
       case (VConst(CStr(_)), value) => throw TypeError(value.typ, "string")
       case (value, _) => throw TypeError(value.typ, "string")
     }
+    case SChown(path, owner) => ??? // TODO: implement in evaluator
     case SSeq(lhs, rhs) => evalStatement(rhs, env)(evalStatement(lhs, env))
     case SLet(id, expr, _, body) => evalStatement(body, env + (id -> evalExpr(expr, env)))
     case SIf(pred, cons, alt) => evalExpr(pred, env) match {

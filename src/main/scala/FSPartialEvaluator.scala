@@ -110,6 +110,7 @@ object FSPartialEvaluator {
     case SRm(path) => SRm(evalExpr(path))
     case SCp(src, dst) => SCp(evalExpr(src), evalExpr(dst))
     case SChmod(path, mode) => SChmod(evalExpr(path), evalExpr(mode))
+    case SChown(path, owner) => SChown(evalExpr(path), evalExpr(owner))
     case SSeq(lhs, rhs) => (evalStatement(lhs), evalStatement(rhs)) match {
       case (SSkip, rhs) => rhs
       case (lhs, SSkip) => lhs

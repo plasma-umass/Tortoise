@@ -25,6 +25,9 @@ private class ConstraintParser extends RegexParsers with PackratParsers {
   lazy val mode: P[String] =
     number
 
+  lazy val owner: P[String] =
+    doubleQuotedString | singleQuotedString
+
   lazy val stateConstraint: P[StateConstraint] =
     path ~ ("->" ~> state) ^^ { case path ~ state => StateConstraint(path, state) }
 
@@ -34,8 +37,11 @@ private class ConstraintParser extends RegexParsers with PackratParsers {
   lazy val modeConstraint: P[ModeConstraint] =
     path ~ ("~>" ~> mode) ^^ { case path ~ mode => ModeConstraint(path, mode) }
 
+  lazy val ownerConstraint: P[OwnerConstraint] =
+    path ~ ("~>" ~> owner) ^^ { case path ~ owner => OwnerConstraint(path, owner) }
+
   lazy val constraint: P[Constraint] =
-    stateConstraint | contentsConstraint | modeConstraint
+    stateConstraint | contentsConstraint | modeConstraint | ownerConstraint
 
   lazy val constraints: P[Seq[Constraint]] =
     repsep(constraint, ",")

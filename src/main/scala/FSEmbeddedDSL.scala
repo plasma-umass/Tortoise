@@ -13,6 +13,7 @@ object FSEmbeddedDSL {
   def rm(path: Expr): Statement = SRm(path)
   def cp(src: Expr, dst: Expr): Statement = SCp(src, dst)
   def chmod(path: Expr, mode: Expr): Statement = SChmod(path, mode)
+  def chown(path: Expr, owner: Expr): Statement = SChown(path, owner)
 
   // Variables
   def $(str: String): EVar = EVar(str)

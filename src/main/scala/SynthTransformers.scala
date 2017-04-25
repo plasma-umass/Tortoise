@@ -14,7 +14,8 @@ object SynthTransformers {
   def identity(prog: Statement): Statement = prog
 
   def doNotEditAbstractions(prog: Statement): Statement = prog match {
-    case SSkip | SMkdir(_) | SCreate(_, _) | SRm(_) | SCp(_, _) | SChmod(_, _) => prog
+    case SMkdir(_) | SCreate(_, _) | SRm(_) | SCp(_, _) | SChmod(_, _) | SChown(_, _) => prog
+    case SSkip => SSkip
     case SSeq(lhs, rhs) => SSeq(doNotEditAbstractions(lhs), doNotEditAbstractions(rhs))
     case SLet(id, vari@EVar(_), _, body) => SLet(id, vari, None, doNotEditAbstractions(body))
     case SLet(id, expr, index, body) => SLet(id, expr, index, doNotEditAbstractions(body))
@@ -22,7 +23,8 @@ object SynthTransformers {
   }
 
   def onlyEditAbstractions(prog: Statement): Statement = prog match {
-    case SSkip | SMkdir(_) | SCreate(_, _) | SRm(_) | SCp(_, _) | SChmod(_, _) => prog
+    case SMkdir(_) | SCreate(_, _) | SRm(_) | SCp(_, _) | SChmod(_, _) | SChown(_, _) => prog
+    case SSkip => SSkip
     case SSeq(lhs, rhs) => SSeq(onlyEditAbstractions(lhs), onlyEditAbstractions(rhs))
     case SLet(id, vari@EVar(_), index, body) => SLet(id, vari, index, onlyEditAbstractions(body))
     case SLet(id, expr, _, body) => SLet(id, expr, None, onlyEditAbstractions(body))
@@ -30,7 +32,8 @@ object SynthTransformers {
   }
 
   def onlyEditPaths(paths: Set[String])(prog: Statement): Statement = prog match {
-    case SSkip | SMkdir(_) | SCreate(_, _) | SRm(_) | SCp(_, _) | SChmod(_, _) => prog
+    case SMkdir(_) | SCreate(_, _) | SRm(_) | SCp(_, _) | SChmod(_, _) | SChown(_, _) => prog
+    case SSkip => SSkip
     case SSeq(lhs, rhs) => SSeq(onlyEditPaths(paths)(lhs), onlyEditPaths(paths)(rhs))
     // All concatenations remain edit sites. It may make sense to change this.
     case SLet(id, e@EBinOp(BConcat, _, _), index, body) => {
@@ -44,7 +47,8 @@ object SynthTransformers {
   }
 
   def doNotEditPaths(paths: Set[String])(prog: Statement): Statement = prog match {
-    case SSkip | SMkdir(_) | SCreate(_, _) | SRm(_) | SCp(_, _) | SChmod(_, _) => prog
+    case SMkdir(_) | SCreate(_, _) | SRm(_) | SCp(_, _) | SChmod(_, _) | SChown(_, _) => prog
+    case SSkip => SSkip
     case SSeq(lhs, rhs) => SSeq(doNotEditPaths(paths)(lhs), doNotEditPaths(paths)(rhs))
     case SLet(id, vari@EVar(_), _, body) => SLet(id, vari, None, doNotEditPaths(paths)(body))
     case SLet(id, EConst(CStr(path)), _, body) if paths.contains(path) => {

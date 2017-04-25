@@ -71,6 +71,33 @@ class SynthesisTests extends org.scalatest.FunSuite {
     synthesisAssert(manifest, constraints, expected)
   }
 
+  test("Update owner on a single file resource.") {
+    val manifest = PuppetParser.parse("""
+      $x = "/foo"
+      $owner = "root"
+      file {$x:
+        ensure => directory,
+        owner => $owner
+      }
+    """)
+
+    // chown awe /foo
+    val constraints = ConstraintParser.parse("""
+      "/foo" ~> "awe"
+    """)
+
+    val expected = PuppetParser.parse("""
+      $x = "/foo"
+      $owner = "awe"
+      file {$x:
+        ensure => directory,
+        owner => $owner
+      }
+    """)
+
+    synthesisAssert(manifest, constraints, expected)
+  }
+
   test("Update a single file resource in a define type.") {
     val manifest = PuppetParser.parse("""
       define f($x) {

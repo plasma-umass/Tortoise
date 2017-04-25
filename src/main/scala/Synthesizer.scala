@@ -122,6 +122,29 @@ case class Synthesizer(paths: Set[String], defaultFS: Map[String, FileState]) {
   )))
 
   /**
+    * Generate initial owner? function (owner1?)
+    */
+
+  val initialOwnerHuh = FunName("owner", 1)
+
+  val initialOwnerTuples = paths.map {
+    path => (StringLit(path), defaultOwner)
+  }
+
+  val initialOwnerHuhBody = initialOwnerTuples.foldRight[Term](defaultOwner) {
+    case ((path, str), acc) => ITE(
+      Equals("p".id, path),
+      str,
+      acc
+    )
+  }
+
+  solver.eval(DefineFun(FunDef(
+    initialOwnerHuh.sym, Seq(SortedVar(SSymbol("p"), stringSort)), stringSort,
+    initialOwnerHuhBody
+  )))
+
+  /**
     * Defining a procedure for parsing models into substitutions.
     */
 
@@ -159,7 +182,7 @@ case class Synthesizer(paths: Set[String], defaultFS: Map[String, FileState]) {
     */
 
   def synthesize(prog: F.Statement, constraints: Seq[Constraint]): Option[Substitution] = {
-    val initialFuns = (initialStateHuh, initialContainsHuh, initialModeHuh)
+    val initialFuns = (initialStateHuh, initialContainsHuh, initialModeHuh, initialOwnerHuh)
     val nextFuns = initialFuns.next
 
     // Collect labels from all let bindings and declare them as variables.
@@ -169,7 +192,7 @@ case class Synthesizer(paths: Set[String], defaultFS: Map[String, FileState]) {
       label => solver.eval(DeclareConst(SSymbol(s"unchanged-$label"), intSort))
     }
 
-    val (commands, (lastStateHuh, lastContainsHuh, lastModeHuh)) =
+    val (commands, (lastStateHuh, lastContainsHuh, lastModeHuh, lastOwnerHuh)) =
       compileStatement(prog, True(), initialFuns, nextFuns)
 
     // Evaluate commands compiled from the program in the solver.
@@ -197,6 +220,13 @@ case class Synthesizer(paths: Set[String], defaultFS: Map[String, FileState]) {
         val pathTerm = StringLit(path)
         val modeTerm = StringLit(mode)
         solver.eval(Assert(Equals(lastModeHuh(pathTerm), modeTerm)))
+      }
+
+      // owner constraints deal with owner?
+      case OwnerConstraint(path, owner) => {
+        val pathTerm = StringLit(path)
+        val ownerTerm = StringLit(owner)
+        solver.eval(Assert(Equals(lastOwnerHuh(pathTerm), ownerTerm)))
       }
     }
 

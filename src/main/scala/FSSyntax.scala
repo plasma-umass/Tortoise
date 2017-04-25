@@ -40,6 +40,7 @@ object FSSyntax {
   case class SRm(path: Expr) extends Statement
   case class SCp(src: Expr, dst: Expr) extends Statement
   case class SChmod(path: Expr, mode: Expr) extends Statement
+  case class SChown(path: Expr, owner: Expr) extends Statement
   case class SSeq(lhs: Statement, rhs: Statement) extends Statement
   // Let statements are special in that they are optionally update sites via synthesis.
   case class SLet(id: String, expr: Expr, index: Option[Int], body: Statement) extends Statement

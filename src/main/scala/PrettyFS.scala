@@ -141,6 +141,9 @@ object PrettyFS extends ParenPrettyPrinter {
     case SChmod(path, mode) => "chmod" <> parens(
       showExpr(path) <> comma <+> showExpr(mode)
     )
+    case SChown(path, owner) => "chown" <> parens(
+      showExpr(path) <> comma <+> showExpr(owner)
+    )
     case SSeq(lhs@SIf(_, _, _), rhs@SIf(_, _, _)) =>
       parindent(showStatement(lhs)) <> semi <@> parindent(showStatement(rhs))
     case SSeq(lhs@SIf(_, _, _), rhs) => parindent(showStatement(lhs)) <> semi <@> showStatement(rhs)

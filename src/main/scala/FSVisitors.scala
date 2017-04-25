@@ -10,7 +10,8 @@ import FSSyntax._
 object FSVisitors {
   // Collects labels from all let bindings.
   def collectLabels(prog: Statement): Set[Int] = prog match {
-    case SSkip | SMkdir(_) | SCreate(_, _) | SRm(_) | SCp(_, _) | SChmod(_, _) => Set()
+    case SSkip => Set()
+    case SMkdir(_) | SCreate(_, _) | SRm(_) | SCp(_, _) | SChmod(_, _) | SChown(_, _) => Set()
     case SSeq(lhs, rhs) => collectLabels(lhs) ++ collectLabels(rhs)
     case SIf(_, cons, alt) => collectLabels(cons) ++ collectLabels(alt)
     case SLet(_, _, None, body) => collectLabels(body)
@@ -45,6 +46,7 @@ object FSVisitors {
       case SRm(path) => visitExpr(path)
       case SCp(src, dst) => visitExpr(src) ++ visitExpr(dst)
       case SChmod(path, _) => visitExpr(path)
+      case SChown(path, _) => visitExpr(path)
       case SSeq(lhs, rhs) => visit(lhs) ++ visit(rhs)
       case SLet(id, expr, _, body) => visit(body)(env + (id -> visitExpr(expr)))
       case SIf(_, cons, alt) => visit(cons) ++ visit(alt)
