@@ -1,5 +1,8 @@
 package pup
 
+import scala.collection.JavaConverters._
+import scala.util.{Try, Success, Failure}
+
 import SymbolicFS.{Constraint, StateConstraint, ContentsConstraint, ModeConstraint}
 import pup.{SymbolicFS => S}
 
@@ -33,6 +36,25 @@ object Infrastructure {
       case (path, File(content, mode)) => {
         Seq(StateConstraint(path, S.File)) ++ content.map(ContentsConstraint(path, _)).toSeq ++
           mode.map(ModeConstraint(path, _)).toSeq
+      }
+    }
+  }
+
+  def getCurrentState(path: String): State = {
+    import java.nio.file._
+    import java.nio.file.attribute._
+
+    val javaPath = Paths.get(path)
+
+    if (Files.exists(javaPath)) {
+      Nil
+    } else {
+      val mode = PosixFilePermissions.toString(Files.getPosixFilePermissions(javaPath))
+      if (Files.isDirectory(javaPath)) {
+        Dir(Some(mode))
+      } else {
+        val content = Files.readAllLines(javaPath).asScala.mkString("\n")
+        File(Some(content), Some(mode))
       }
     }
   }
