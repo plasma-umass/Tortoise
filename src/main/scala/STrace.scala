@@ -22,6 +22,10 @@ object STrace {
     path: String, flags: Set[OpenFlag], mode: Option[String], exitCode: Int
   ) extends Statement
 
+  case class SStat(
+    path: String, flags: Seq[String], exitCode: Int
+  ) extends Statement
+
   case class SUnknown(
     cmd: String, path: String, args: Seq[String], exitCode: Int
   ) extends Statement
@@ -30,15 +34,23 @@ object STrace {
 case class STrace(shell: String) {
   val cmd = Seq("strace", "-e", "trace=file,write", "-f", shell)
 
-  var traces: Seq[Statement] = Seq()
+  private var shouldSynth = false
+  private var traces: Seq[Statement] = Seq()
   val straceLogger = ProcessLogger(
-    line => {
-      traces = traces :+ STraceParser.parse(line) 
+    line => STraceParser.parse(line) match {
+      case SStat(path, _, _) if path == "/bin/synth" => shouldSynth = true
+      case stmt => traces = traces :+ stmt
     },
     _ => ()
   )
 
   cmd ! straceLogger
+
+  def shouldUpdate(): Boolean = shouldSynth
+
+  def updated() {
+    shouldSynth = false
+  }
 
   def affectedPaths(): Set[String] = traces.flatMap {
     case SOpen(path, flags, _, _) if flags.contains(OpenWriteOnly) => Some(path)

@@ -38,6 +38,11 @@ class STraceParser extends RegexParsers with PackratParsers {
       case path ~ flags ~ mode ~ exitCode => SOpen(path, flags, mode, exitCode)
     }
 
+  lazy val stat: P[SStat] =
+    "stat" ~> parens(path ~ ("," ~> rep1sep(term, ","))) ~ ("=" ~> number) ^^ {
+      case path ~ args ~ exitCode => SStat(path, args, exitCode)
+    }
+
   lazy val unknown: P[SUnknown] =
     word ~ parens(path ~ ("," ~> rep1sep(term, ","))) ~ ("=" ~> number) ^^ {
       case cmd ~ (path ~ args) ~ exitCode => SUnknown(cmd, path, args, exitCode)

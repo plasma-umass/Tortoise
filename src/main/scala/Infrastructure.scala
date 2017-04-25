@@ -1,7 +1,6 @@
 package pup
 
 import scala.collection.JavaConverters._
-import scala.util.{Try, Success, Failure}
 
 import SymbolicFS.{Constraint, StateConstraint, ContentsConstraint, ModeConstraint}
 import pup.{SymbolicFS => S}
