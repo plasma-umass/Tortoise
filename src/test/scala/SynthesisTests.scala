@@ -448,7 +448,7 @@ class SynthesisTests extends org.scalatest.FunSuite {
     synthesisAssert(manifest, constraints, expected)
   }
 
-  test("Update the a single file resource in a complex if statement") {
+  test("Update a single file resource in a complex if statement") {
     val manifest = PuppetParser.parse("""
       $flag = "file"
       $x = "/awe"
@@ -492,5 +492,32 @@ class SynthesisTests extends org.scalatest.FunSuite {
     """)
 
     synthesisAssert(manifest, constraints, expected)
+  }
+
+  test("Update the name of a user account using a user resource") {
+    val manifest = PuppetParser.parse("""
+      $x = "awe"
+      user {
+        name => $x,
+        managehome => "true"
+      }
+    """)
+
+    // userdel awe
+    // useradd -m arjun
+    val constraints = ConstraintParser.parse("""
+      "/etc/users/awe" -> nil, "/home/awe" -> nil,
+      "/etc/users/arjun" -> file, "/home/arjun" -> dir
+    """)
+
+    val expected = PuppetParser.parse("""
+      $x = "arjun"
+      user {
+        name => $x,
+        managehome => "true"
+      }
+    """)
+
+    synthesisAssert(manifest, constraints, expected, doNotEditAbstractions)
   }
 }
