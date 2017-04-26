@@ -520,4 +520,30 @@ class SynthesisTests extends org.scalatest.FunSuite {
 
     synthesisAssert(manifest, constraints, expected, doNotEditAbstractions)
   }
+
+  test("Change a file to a directory while changing paths") {
+    val manifest = PuppetParser.parse("""
+      $ensure = "present"
+      $x = "/awe"
+      file{$x:
+        ensure => $ensure
+      }
+    """)
+
+    // rm /awe
+    // mkdir /yuriy
+    val constraints = ConstraintParser.parse("""
+      "/awe" -> nil, "/yuriy" -> dir
+    """)
+
+    val expected = PuppetParser.parse("""
+      $ensure = "directory"
+      $x = "/yuriy"
+      file{$x:
+        ensure => $ensure
+      }
+    """)
+
+    synthesisAssert(manifest, constraints, expected, doNotEditAbstractions)
+  }
 }
