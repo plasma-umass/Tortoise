@@ -68,7 +68,7 @@ object Infrastructure {
 
     val javaPath = Paths.get(path)
 
-    if (Files.exists(javaPath)) {
+    if (Files.notExists(javaPath)) {
       Nil
     } else {
       val mode = convertToString(Files.getPosixFilePermissions(javaPath).asScala.toSet)
