@@ -43,12 +43,35 @@ object Infrastructure {
     import java.nio.file._
     import java.nio.file.attribute._
 
+    def convertToString(perms: Set[PosixFilePermission]): String = {
+      import PosixFilePermission._
+
+      val owner =
+        perms.find(_ == OWNER_READ).map(_ => "1").getOrElse("0") +
+        perms.find(_ == OWNER_WRITE).map(_ => "1").getOrElse("0") +
+        perms.find(_ == OWNER_EXECUTE).map(_ => "1").getOrElse("0")
+
+      val group =
+        perms.find(_ == GROUP_READ).map(_ => "1").getOrElse("0") +
+        perms.find(_ == GROUP_WRITE).map(_ => "1").getOrElse("0") +
+        perms.find(_ == GROUP_EXECUTE).map(_ => "1").getOrElse("0")
+
+      val others =
+        perms.find(_ == OTHERS_READ).map(_ => "1").getOrElse("0") +
+        perms.find(_ == OTHERS_WRITE).map(_ => "1").getOrElse("0") +
+        perms.find(_ == OTHERS_EXECUTE).map(_ => "1").getOrElse("0")
+
+      Integer.parseInt(owner, 2).toString +
+      Integer.parseInt(group, 2).toString +
+      Integer.parseInt(others, 2).toString
+    }
+
     val javaPath = Paths.get(path)
 
     if (Files.exists(javaPath)) {
       Nil
     } else {
-      val mode = PosixFilePermissions.toString(Files.getPosixFilePermissions(javaPath))
+      val mode = convertToString(Files.getPosixFilePermissions(javaPath).asScala.toSet)
       if (Files.isDirectory(javaPath)) {
         Dir(Some(mode))
       } else {
