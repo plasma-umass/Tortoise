@@ -43,13 +43,18 @@ class STraceParser extends RegexParsers with PackratParsers {
       case path ~ args ~ exitCode => SStat(path, args, exitCode)
     }
 
+  lazy val rename: P[SRename] =
+    "rename" ~> parens(path ~ ("," ~> path)) ~ ("=" ~> number) ^^ {
+      case src ~ dst ~ exitCode => SRename(src, dst, exitCode)
+    }
+
   lazy val unknown: P[SUnknown] =
     word ~ parens(path ~ ("," ~> rep1sep(term, ","))) ~ ("=" ~> number) ^^ {
       case cmd ~ (path ~ args) ~ exitCode => SUnknown(cmd, path, args, exitCode)
     }
 
   lazy val statements: P[Statement] =
-    open | unknown
+    open | stat | rename | unknown
 
   // Dummy parsers to deal with strace oddities we don't care about.
   lazy val exitMessage: P[String] =

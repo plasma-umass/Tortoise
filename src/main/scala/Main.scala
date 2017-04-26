@@ -23,35 +23,7 @@ object Main extends App {
     val fileName = config.string("filename")
     val shell = config.string("shell")
 
-    val strace = STrace(shell)
-    while (true) {
-      if (strace.shouldUpdate) {
-        Try({
-          val manifest = PuppetParser.parseFile(fileName)
-          val labeledManifest = manifest.labeled
-          val prog = labeledManifest.compile
-
-          val fs = FSEval.eval(prog)
-          val constraints = strace.constraints(fs)
-
-          Synthesizer.synthesize(prog, constraints).map {
-            subst => PuppetUpdater.update(labeledManifest, subst)
-          }
-        }) match {
-          case Success(Some(res)) => {
-            val javaPath = Paths.get(fileName)
-            val content = (res.pretty + "\n").getBytes(StandardCharsets.UTF_8)
-            Files.write(javaPath, content, StandardOpenOption.TRUNCATE_EXISTING)
-          }
-          case Success(None) => {
-            println("Failed to synthesize an update to the specified manifest given those constraints.")
-          }
-          case Failure(exn) => throw exn
-        }
-
-        strace.updated()
-      }
-    }
+    val strace = STrace(fileName, shell).start()
   }
 
   def shell(config: Config): Unit = {
