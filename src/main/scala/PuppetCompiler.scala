@@ -1,7 +1,6 @@
 package pup
 
 import pup.{FSSyntax => F, PuppetSyntax => P}
-import pup.FSEmbeddedDSL._
 
 /*
  * Assume that the manifest is deterministic and that the order in which resources appear is the
@@ -9,6 +8,9 @@ import pup.FSEmbeddedDSL._
  * it should be fairly trivial given Rehearsal to convert manifests to this form.
  */
 object PuppetCompiler {
+  import FSEmbeddedDSL._
+  import PuppetCompilerInitialization._
+
   type IdEnv = Map[String, String]
   type ResEnv = Map[String, (P.Arguments, Seq[Int], P.Manifest)]
   type Envs = (IdEnv, ResEnv)
@@ -136,4 +138,27 @@ object PuppetCompiler {
       (cmd, envs._2)
     }
   }
+
+  def compile(mani: P.Manifest): F.Statement = compileManifest(mani)(Map() -> initialResEnv)._1
+}
+
+object PuppetCompilerInitialization {
+  import PuppetCompiler._
+  import PuppetEmbeddedDSL._
+  import PuppetLabeler._
+
+  lazy val initialResEnv: ResEnv = compileManifest {
+    label {
+      define ("user") ("name", "managehome") {
+        resource("file")(s("/etc/users/", $("name")),
+          ensure ~> present
+        ) >>
+        _if ($("managehome") /= undef) {
+          resource("file")(s("/home/", $("name")),
+            ensure ~> directory
+          )
+        }
+      }
+    }
+  }(Map() -> Map())._2
 }

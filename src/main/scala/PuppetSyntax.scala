@@ -37,7 +37,7 @@ object PuppetSyntax {
   sealed trait Manifest {
     lazy val pretty: String = PrettyPuppet.prettyManifest(this)
     lazy val labeled: Manifest = PuppetLabeler.label(this)
-    lazy val compile: FSSyntax.Statement = PuppetCompiler.compileManifest(this)(Map() -> Map())._1
+    lazy val compile: FSSyntax.Statement = PuppetCompiler.compile(this)
 
     private var internalLabels: Seq[Int] = Seq()
 

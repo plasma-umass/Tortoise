@@ -97,7 +97,7 @@ private class PuppetParser extends RegexParsers with PackratParsers {
     identifier ^^ { str => EConst(CStr(str)) }
 
   lazy val attribute: P[Attribute] =
-    identifier ~ ("=>" ~> (keyword | expr)) ^^ {
+    identifier ~ ("=>" ~> (expr | keyword)) ^^ {
       case name ~ expr => Attribute(name, expr)
     }
 
