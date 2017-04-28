@@ -15,10 +15,9 @@ import SymbolicFSCompiler._
 object Synthesizer {
   import Implicits._
 
-  def synthesize(
-    inProg: F.Statement, constraints: Seq[Constraint], transformer: T.Transformer = T.identity
-  ): Option[Substitution] = {
-    val prog = transformer(inProg)
+  private def computePathsAndDefaultFS(
+    prog: F.Statement, constraints: Seq[Constraint]
+  ): (Set[String], Map[String, FileState]) = {
     val progPaths = FSVisitors.collectPaths(prog)
     val constraintPaths = constraints.map(_.paths).flatten
     val basePaths = progPaths ++ constraintPaths ++ Settings.assumedDirs
@@ -30,9 +29,22 @@ object Synthesizer {
     // Create the default file system representation.
     val defaultFS = Settings.assumedDirs.map((_, Dir)).toMap + ("/" -> Dir)
 
-    // Create synthesizer and synthesize!
+    (paths, defaultFS)
+  }
+
+  def synthesize(
+    inProg: F.Statement, constraints: Seq[Constraint], transformer: T.Transformer = T.identity
+  ): Option[Substitution] = {
+    val prog = transformer(inProg)
+    val (paths, defaultFS) = computePathsAndDefaultFS(prog, constraints)
     val synthesizer = Synthesizer(paths, defaultFS)
     synthesizer.synthesize(prog.partialed, constraints)
+  }
+
+  def synthesizeAll(prog: F.Statement, constraints: Seq[Constraint]): Seq[Substitution] = {
+    val (paths, defaultFS) = computePathsAndDefaultFS(prog, constraints)
+    val synthesizer = Synthesizer(paths, defaultFS)
+    synthesizer.synthesizeAll(prog.partialed, constraints)
   }
 }
 
@@ -148,11 +160,11 @@ case class Synthesizer(paths: Set[String], defaultFS: Map[String, FileState]) {
     * Defining a procedure for parsing models into substitutions.
     */
 
-  def parseModel(exprs: List[SExpr]): Substitution = {
-    def extractKey(str: String): Int = Integer.parseInt(
-      str.substring(str.indexOf('-') + 1)
-    )
+  def extractKey(str: String): Int = Integer.parseInt(
+    str.substring(str.indexOf('-') + 1)
+  )
 
+  def parseModel(exprs: List[SExpr]): Substitution = {
     val changedMap = exprs.flatMap {
       case DefineFun(FunDef(SSymbol(str), Seq(), _, body)) if str.startsWith("unchanged") => {
         val key = extractKey(str)
@@ -178,10 +190,10 @@ case class Synthesizer(paths: Set[String], defaultFS: Map[String, FileState]) {
   }
 
   /**
-    * Defining the synthesis procedure.
+    * Defining a procedure to build the symbolic file system in the solver.
     */
 
-  def synthesize(prog: F.Statement, constraints: Seq[Constraint]): Option[Substitution] = {
+  def buildSymbolicFS(prog: F.Statement, constraints: Seq[Constraint]): (Seq[Term], Term) = {
     val initialFuns = (initialStateHuh, initialContainsHuh, initialModeHuh, initialOwnerHuh)
     val nextFuns = initialFuns.next
 
@@ -236,6 +248,16 @@ case class Synthesizer(paths: Set[String], defaultFS: Map[String, FileState]) {
     solver.eval(DeclareConst(sum, IntSort()))
     solver.eval(Assert(Equals(sum.id, FunctionApplication("+".id, counts))))
 
+    (counts, sum.id)
+  }
+
+  /**
+    * Defining the synthesis procedure.
+    */
+
+  def synthesize(prog: F.Statement, constraints: Seq[Constraint]): Option[Substitution] = {
+    // Build the symbolic file system in the theorem prover.
+    val (counts, sum) = buildSymbolicFS(prog, constraints)
 
     // Use binary search to find a satisfying model that maximizes the number of unchanged labels.
     var lo = 0
@@ -246,7 +268,7 @@ case class Synthesizer(paths: Set[String], defaultFS: Map[String, FileState]) {
       solver.pushPop {
         solver.eval(Assert(
           GreaterEquals(
-            sum.id,
+            sum,
             SNumeral((lo + hi) / 2)
           )
         ))
@@ -261,6 +283,47 @@ case class Synthesizer(paths: Set[String], defaultFS: Map[String, FileState]) {
     }
 
     // Parse the maximal satisfying model into a substitution.
+    res.map(parseModel)
+  }
+
+  def synthesizeAll(prog: F.Statement, constraints: Seq[Constraint]): Seq[Substitution] = {
+    val (_, _) = buildSymbolicFS(prog, constraints)
+
+    // Iterate through all possible satisfying models until there are no more possible.
+    var res: Seq[List[SExpr]] = Seq()
+    while (solver.checkSat()) {
+      val currentModel = solver.getModel()
+      res = res :+ currentModel
+
+      val modelPairs = currentModel.flatMap {
+        case DefineFun(FunDef(sym@SSymbol(_), Seq(), _, body)) => Some(sym -> body)
+        case _ => None
+      }
+
+      val unchanged = modelPairs.filter(_._1.name.startsWith("unchanged-")).map {
+        case (SSymbol(name), NumeralLit(n)) if n.intValue == 1 => extractKey(name) -> true
+        case (SSymbol(name), NumeralLit(n)) if n.intValue == 0 => extractKey(name) -> false
+        case _ => throw Unreachable
+      }.toMap
+
+      // Assert that the model cannot be the current model.
+      val modelTerm =modelPairs.foldRight(True()) {
+        case ((SSymbol(name), body), acc) if name.startsWith("loc-") => {
+          val key = extractKey(name)
+
+          if (unchanged(key)) {
+            acc
+          } else {
+            And(Equals(name.id, body), acc)
+          }
+        }
+        case ((sym, body), acc) => And(Equals(sym.id, body), acc)
+        case (_, acc) => acc
+      }
+      solver.eval(Assert(Not(modelTerm)))
+    }
+
+    // Parse all satisfying models into a substitution.
     res.map(parseModel)
   }
 }
