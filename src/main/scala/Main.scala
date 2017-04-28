@@ -37,7 +37,7 @@ object Main extends App {
     // userdel awe
     // useradd -m arjun
     val constraints = ConstraintParser.parse("""
-      "/foo" -> nil, "/bar" -> dir, "/baz" -> dir
+      "/foo" -> nil, "/bar" -> dir
     """)
 
     val labeledManifest = manifest.labeled

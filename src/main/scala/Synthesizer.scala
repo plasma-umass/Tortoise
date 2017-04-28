@@ -295,31 +295,18 @@ case class Synthesizer(paths: Set[String], defaultFS: Map[String, FileState]) {
       val currentModel = solver.getModel()
       res = res :+ currentModel
 
+      // Collect all pairs of symbol and their values from the model.
       val modelPairs = currentModel.flatMap {
         case DefineFun(FunDef(sym@SSymbol(_), Seq(), _, body)) => Some(sym -> body)
         case _ => None
       }
 
-      val unchanged = modelPairs.filter(_._1.name.startsWith("unchanged-")).map {
-        case (SSymbol(name), NumeralLit(n)) if n.intValue == 1 => extractKey(name) -> true
-        case (SSymbol(name), NumeralLit(n)) if n.intValue == 0 => extractKey(name) -> false
-        case _ => throw Unreachable
-      }.toMap
-
-      // Assert that the model cannot be the current model.
-      val modelTerm =modelPairs.foldRight(True()) {
-        case ((SSymbol(name), body), acc) if name.startsWith("loc-") => {
-          val key = extractKey(name)
-
-          if (unchanged(key)) {
-            acc
-          } else {
-            And(Equals(name.id, body), acc)
-          }
-        }
-        case ((sym, body), acc) => And(Equals(sym.id, body), acc)
-        case (_, acc) => acc
+      // Build a model term stating which locations were changed and unchanged.
+      val modelTerm = modelPairs.filter(_._1.name.startsWith("unchanged-")).foldRight(True()) {
+        case ((sym, value), acc) => And(Equals(sym.id, value), acc)
       }
+
+      // Assert that the model cannot match this assignment of changed and unchanged locations.
       solver.eval(Assert(Not(modelTerm)))
     }
 
