@@ -5,9 +5,13 @@ import PuppetUpdater._
 import SymbolicFS._
 
 object UpdateRanker {
-  // TODO: better ranking
   def rank(substs: Seq[Substitution])(implicit manifest: Manifest): Seq[Substitution] = {
-    substs.sortBy(_.size)
+    substs.sortBy {
+      subst => (subst.size, affectedTerms(manifest, subst).foldRight(0) {
+        case (TManifest(_, cxt), acc) => acc + cxt.env.size
+        case (TAttribute(_, cxt), acc) => acc + cxt.env.size
+      })
+    }
   }
 
   def promptRankedChoice(substs: Seq[Substitution])(implicit manifest: Manifest): Manifest = {
