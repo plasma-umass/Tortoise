@@ -49,13 +49,15 @@ object PuppetUpdater {
   def updateManifest(mani: Manifest)(implicit cxt: UpdateContext): Manifest = mani match {
     case MEmpty => MEmpty
     case MAssign(id, expr, body) => cxt.subst.get(mani.label) match {
-      case Some(replacement) => MAssign(id, replaceExpr(expr, replacement), updateManifest(body))
-      case None => MAssign(id, expr, updateManifest(body))
+      case Some(replacement) => {
+        MAssign(id, replaceExpr(expr, replacement), updateManifest(body)).setLabel(mani.label)
+      }
+      case None => MAssign(id, expr, updateManifest(body)).setLabel(mani.label)
     }
     case MResource(typ, title, attrs) => MResource(typ, updateExpr(title), updateAttributes(attrs))
     case MDefine(typ, args, body) => MDefine(
       typ, args, updateManifest(body)(cxt ++ args.map(_.vari.id).zip(mani.labels))
-    )
+    ).setLabels(mani.labels)
     case MSeq(lhs, rhs) => MSeq(updateManifest(lhs), updateManifest(rhs))
     case MIf(pred, cons, alt) => MIf(pred, updateManifest(cons), updateManifest(alt))
   }

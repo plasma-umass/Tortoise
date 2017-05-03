@@ -43,16 +43,9 @@ object Main extends App {
     val labeledManifest = manifest.labeled
     val prog = labeledManifest.compile
 
-    val programs = Synthesizer.synthesizeAll(prog, constraints).map {
-      subst => PuppetUpdater.update(labeledManifest, subst)
-    }
-
-    programs.foreach {
-      program => {
-        println(program.pretty)
-        println()
-      }
-    }
+    val substs = Synthesizer.synthesizeAll(prog, constraints)
+    val updatedManifest = UpdateRanker.promptRankedChoice(substs)(labeledManifest)
+    println(updatedManifest.pretty)
   }
 
   def watch(config: Config): Unit = {

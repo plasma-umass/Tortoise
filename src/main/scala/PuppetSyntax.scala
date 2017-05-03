@@ -4,8 +4,11 @@ import CommonSyntax._
 
 object PuppetSyntax {
   // Attributes for resource instantiations.
-  case class Attribute(name: String, value: Expr)
+  case class Attribute(name: String, value: Expr) {
+    lazy val pretty: String = PrettyPuppet.prettyAttribute(this)
+  }
   type Attributes = Seq[Attribute]
+
   // Arguments to define types.
   // NOTE: we may wish to include types later.
   case class Argument(vari: EVar, default: Option[Expr])
@@ -35,6 +38,7 @@ object PuppetSyntax {
   case class EBinOp(op: BinOp, lhs: Expr, rhs: Expr) extends Expr
 
   sealed trait Manifest {
+    lazy val line: String = PrettyPuppet.prettyLine(this)
     lazy val pretty: String = PrettyPuppet.prettyManifest(this)
     lazy val labeled: Manifest = PuppetLabeler.label(this)
     lazy val compile: FSSyntax.Statement = PuppetCompiler.compile(this)

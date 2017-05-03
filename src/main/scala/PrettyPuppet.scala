@@ -141,6 +141,17 @@ object PrettyPuppet extends ParenPrettyPrinter {
     }
   }
 
+  def showManifestLine(mani: Manifest): Doc = mani match {
+    case MEmpty => emptyDoc
+    case MAssign(id, expr, _) => dollar <> id <+> equal <+> showExpr(expr)
+    case MResource(typ, title, _) => typ <+> lbrace <+> showExpr(title) <> colon
+    case MDefine(typ, args, _) => "define" <+> typ <> parens(showArguments(args))
+    case MSeq(lhs, _) => showManifestLine(lhs)
+    case MIf(pred, _, _) => "if" <+> parens(showExpr(pred))
+  }
+
   def prettyExpr(expr: Expr): String = super.pretty(showExpr(expr)).layout
+  def prettyAttribute(attr: Attribute): String = super.pretty(showAttribute(attr)).layout
   def prettyManifest(mani: Manifest): String = super.pretty(showManifest(mani)).layout
+  def prettyLine(mani: Manifest): String = super.pretty(showManifestLine(mani)).layout
 }
