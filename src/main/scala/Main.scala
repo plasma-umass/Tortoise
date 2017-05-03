@@ -73,8 +73,11 @@ object Main extends App {
       val labeledManifest = manifest.labeled
       val constraints = ConstraintParser.parse(constraintString)
       val prog = labeledManifest.compile
-      Synthesizer.synthesize(prog, constraints).map {
-        subst => PuppetUpdater.update(labeledManifest, subst)
+      val substs = Synthesizer.synthesizeAll(prog, constraints)
+      if (substs.size > 0) {
+        Some(UpdateRanker.promptRankedChoice(substs)(labeledManifest))
+      } else {
+        None
       }
     }) match {
       case Success(Some(result)) => {
