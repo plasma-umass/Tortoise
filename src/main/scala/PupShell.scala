@@ -28,18 +28,17 @@ case class PupShell(path: String) {
         val prog = labeledManifest.compile
         val constraints = fileSystem.toConstraints
 
-        Synthesizer.synthesize(prog, constraints).map {
-          subst => PuppetUpdater.update(labeledManifest, subst)
-        } match {
-          case Some(res) => {
-            println("Update synthesis was successful.")
+        Synthesizer.synthesizeAll(prog, constraints) match {
+          case substs@(_ +: _) => {
+            val res = UpdateRanker.promptRankedChoice(substs)(labeledManifest)
             val javaPath = Paths.get(path)
             val content = (res.pretty + "\n").getBytes(StandardCharsets.UTF_8)
             Files.write(javaPath, content, StandardOpenOption.TRUNCATE_EXISTING)
+            println("Update applied!")
 
             loop(FSEval.eval(res.labeled.compile))
           }
-          case None => {
+          case Seq() => {
             println("Failed to synthesize an update to the manifest given those constraints.")
             println(constraints)
 
