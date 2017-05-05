@@ -1,5 +1,6 @@
 package pup
 
+import java.io._
 import scala.util.{Try, Success, Failure}
 
 object Main extends App {
@@ -93,22 +94,41 @@ object Main extends App {
   }
 
   def benchmark(config: Config): Unit = {
-    val fileName = config.string("filename")
+    val inFile = config.string("infile")
+    val outFile = config.string("outfile")
     val constraintString = config.string("constraints")
     val trials = config.int("trials")
     val max = config.int("max")
 
-    val manifest = PuppetParser.parseFile(fileName)
+    val manifest = PuppetParser.parseFile(inFile)
     val constraints = ConstraintParser.parse(constraintString)
 
     val res = Scaling.benchmark(manifest, constraints, trials, max)
 
-    res.toSeq.sortBy(_._1).foreach {
+    val header = 1.to(trials).foldLeft("size") {
+      case (acc, trial) => s"$acc,trial$trial"
+    }
+
+    val entries = res.toSeq.sortBy(_._1).map {
       case (key, value) => {
-        val mean = (value.sum / value.length) / 1000000
-        println(s"$key -> $mean ms")
+        val values = value.foldRight("") {
+          case (time, acc) => s",$time$acc"
+        }
+        s"$key$values"
       }
     }
+
+    printToFile(new File(outFile)) {
+      p => {
+        p.println(header)
+        entries.foreach(p.println)
+      }
+    }
+  }
+
+  def printToFile(f: java.io.File)(op: java.io.PrintWriter => Unit) {
+    val p = new java.io.PrintWriter(f)
+    try { op(p) } finally { p.close() }
   }
 
   val parser = new scopt.OptionParser[Config]("pup") {
@@ -149,7 +169,9 @@ object Main extends App {
     cmd("bench")
       .action((_, c) => c.copy(command = benchmark))
       .text("Runs the scalability benchmark for the specified manifest and constraints for a number of trials up to a max size.")
-      .children(string("filename"), string("constraints"), int("trials"), int("max"))
+      .children(
+        string("infile"), string("outfile"), string("constraints"), int("trials"), int("max")
+      )
   }
 
   parser.parse(args, Config(usage, Map(), Map(), Map())) match {
