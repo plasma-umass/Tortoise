@@ -37,19 +37,32 @@ object Synthesizer {
   ): Option[Substitution] = {
     val prog = transformer(inProg)
     val (paths, defaultFS) = computePathsAndDefaultFS(prog, constraints)
-    val synthesizer = Synthesizer(paths, defaultFS)
-    synthesizer.synthesize(prog.partialed, constraints)
+    synthesizer(paths, defaultFS) {
+      synth => synth.synthesize(prog.partialed, constraints)
+    }
   }
 
   def synthesizeAll(prog: F.Statement, constraints: Seq[Constraint]): Seq[Substitution] = {
     val (paths, defaultFS) = computePathsAndDefaultFS(prog, constraints)
+    synthesizer(paths, defaultFS) {
+      synth => synth.synthesizeAll(prog.partialed, constraints)
+    }
+  }
+
+  def synthesizer[A](
+    paths: Set[String], defaultFS: Map[String, FileState]
+  )(func: Synthesizer => A): A = {
     val synthesizer = Synthesizer(paths, defaultFS)
-    synthesizer.synthesizeAll(prog.partialed, constraints)
+    val res = func(synthesizer)
+    synthesizer.free()
+    res
   }
 }
 
 case class Synthesizer(paths: Set[String], defaultFS: Map[String, FileState]) {
   val solver = SMT()
+
+  def free(): Unit = solver.free()
 
   /**
     * Declare State datatype.
