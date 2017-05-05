@@ -23,7 +23,7 @@ object PuppetEmbeddedDSL {
   implicit class RichManifest(mani: Manifest) {
     def >>(other: Manifest): Manifest = (mani, other) match {
       case (MEmpty, _) => other
-      case (_, MEmpty) => mani 
+      case (_, MEmpty) => mani
       case _ => MSeq(mani, other)
     }
   }

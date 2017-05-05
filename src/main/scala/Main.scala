@@ -92,6 +92,25 @@ object Main extends App {
     }
   }
 
+  def benchmark(config: Config): Unit = {
+    val fileName = config.string("filename")
+    val constraintString = config.string("constraints")
+    val trials = config.int("trials")
+    val max = config.int("max")
+
+    val manifest = PuppetParser.parseFile(fileName)
+    val constraints = ConstraintParser.parse(constraintString)
+
+    val res = Scaling.benchmark(manifest, constraints, trials, max)
+
+    res.toSeq.sortBy(_._1).foreach {
+      case (key, value) => {
+        val mean = (value.sum / value.length) / 1000000
+        println(s"$key -> $mean ms")
+      }
+    }
+  }
+
   val parser = new scopt.OptionParser[Config]("pup") {
 
     def string(name: String) = opt[String](name).required.action {
@@ -126,6 +145,11 @@ object Main extends App {
     cmd("ranktest")
       .action((_, c) => c.copy(command = ranktest))
       .text("Runs a test of the update ranking.")
+
+    cmd("bench")
+      .action((_, c) => c.copy(command = benchmark))
+      .text("Runs the scalability benchmark for the specified manifest and constraints for a number of trials up to a max size.")
+      .children(string("filename"), string("constraints"), int("trials"), int("max"))
   }
 
   parser.parse(args, Config(usage, Map(), Map(), Map())) match {
