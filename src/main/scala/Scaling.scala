@@ -30,7 +30,7 @@ object Scaling {
     import Implicits._
 
     0.to(max).map {
-      n => n -> 0.to(trials).map { _ =>
+      n => n -> 1.to(trials).map { _ =>
         val manifest = scale(mani, n)
         val labeledManifest = manifest.labeled
         val prog = labeledManifest.compile
