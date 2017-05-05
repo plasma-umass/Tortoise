@@ -47,10 +47,14 @@ private class PuppetParser extends RegexParsers with PackratParsers {
   lazy val strInterp: P[Expr] =
     doubleQuotedString ^^ { str => interpolateString(str) }
 
+  lazy val undef: P[Expr] =
+    "undef" ^^ { _ => EUndef }
+
   lazy val atomicExpr: P[Expr] =
     variable  |
     strInterp |
     constant  |
+    undef     |
     parens(expr)
 
   lazy val unaryOp: P[Expr] =
