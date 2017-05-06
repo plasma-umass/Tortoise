@@ -81,6 +81,26 @@ object PuppetCompiler {
       }
     }
 
+    // Handle special case for package resources.
+    case "package" => {
+      val attrMap = attrs.flatMap(P.Attribute.unapply).toMap
+      val directName = attrMap.get("name").map(compileExpr).getOrElse(undef)
+      val name = if (directName == undef) {
+        compileExpr(title)
+      } else {
+        directName
+      }
+      val ensure = attrMap.get("ensure").map(compileExpr).getOrElse(undef)
+      val provider = attrMap.get("provider").map(compileExpr).getOrElse("dpkg")
+
+      // TODO: call out to package server.
+      _if (ensure =? "present") {
+        create("/" + provider + "/" + name, "package installed")
+      } .else_if (ensure =? "absent") {
+        rm("/" + provider + "/" + name)
+      }
+    }
+
     // This case corresponds to applying a define type.
     case _ => {
       val renv = envs._2
