@@ -42,7 +42,10 @@ object Synthesizer {
     }
   }
 
-  def synthesizeAll(prog: F.Statement, constraints: Seq[Constraint]): Seq[Substitution] = {
+  def synthesizeAll(
+    inProg: F.Statement, constraints: Seq[Constraint], transformer: T.Transformer = T.identity
+  ): Seq[Substitution] = {
+    val prog = transformer(inProg)
     val (paths, defaultFS) = computePathsAndDefaultFS(prog, constraints)
     synthesizer(paths, defaultFS) {
       synth => synth.synthesizeAll(prog.partialed, constraints)
