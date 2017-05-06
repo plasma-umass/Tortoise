@@ -2,6 +2,7 @@ package pup
 
 import java.io._
 import scala.util.{Try, Success, Failure}
+import benchmarks._
 
 object Main extends App {
 

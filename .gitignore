@@ -9,7 +9,6 @@
 
 # Mac OS junk
 .DS_Store
-benchmarks
 
 # emacs files
 [#]*

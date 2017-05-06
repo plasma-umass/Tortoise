@@ -1,5 +1,6 @@
-package pup
+package pup.benchmarks
 
+import pup._
 import PuppetEmbeddedDSL._
 import PuppetSyntax._
 import SymbolicFS._
