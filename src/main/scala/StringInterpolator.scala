@@ -27,6 +27,7 @@ object StringInterpolator {
     // Return a simple EStr or EVar if interpolation is not actually taking place here.
     terms match {
       case Seq(term) => term
+      case Seq() => EConst(CStr(""))
       case _ => EStrInterp(terms)
     }
   }
