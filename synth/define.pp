@@ -3,6 +3,5 @@ define f($x) {
     ensure => directory
   }
 }
-
 $y = "/foo"
 f { x => $y }
