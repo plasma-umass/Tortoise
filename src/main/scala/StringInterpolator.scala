@@ -5,7 +5,7 @@ import PuppetSyntax._
 
 object StringInterpolator {
   val validId = {
-    Set('-', '_') union ('a' to 'z').toSet union ('A' to 'Z').toSet union ('0' to '9').toSet
+    Set('-', '_', ':') union ('a' to 'z').toSet union ('A' to 'Z').toSet union ('0' to '9').toSet
   }
 
   def interpolateString(str: String): Expr = {
