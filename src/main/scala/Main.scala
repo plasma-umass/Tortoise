@@ -66,16 +66,27 @@ object Main extends App {
   }
 
   def synthesize(config: Config): Unit = {
+    import Implicits._
+
     val fileName = config.string("filename")
     val constraintString = config.string("constraints")
 
     Try({
       val manifest = PuppetParser.parseFile(fileName)
       println(s"Original manifest:\n\n${manifest.pretty}\n")
+
       val labeledManifest = manifest.labeled
       val constraints = ConstraintParser.parse(constraintString)
       val prog = labeledManifest.compile
-      val substs = Synthesizer.synthesizeAll(prog, constraints)
+
+      val progPaths = FSVisitors.collectPaths(manifest.labeled.compile).flatMap(_.ancestors)
+      val constraintPaths = constraints.flatMap(_.paths.flatMap(_.ancestors)).toSet
+      val paths = progPaths -- constraintPaths
+
+      val substs = Synthesizer.synthesizeAll(
+        prog, constraints, SynthTransformers.doNotEditPaths(paths)
+      )
+
       if (substs.size > 0) {
         Some(UpdateRanker.promptRankedChoice(substs)(labeledManifest))
       } else {
