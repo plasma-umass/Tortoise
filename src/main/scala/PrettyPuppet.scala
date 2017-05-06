@@ -86,6 +86,11 @@ object PrettyPuppet extends ParenPrettyPrinter {
    "present", "absent", "directory"
   )
 
+  def showInterpTerm(expr: Expr): Doc = expr match {
+    case EConst(CStr(s)) => s
+    case _ => showExpr(expr)
+  }
+
   def showExpr(expr: Expr): Doc = expr match {
     case EUndef => "undef"
     case EVar(id) => dollar <> id
@@ -95,7 +100,7 @@ object PrettyPuppet extends ParenPrettyPrinter {
     case EConst(CBool(b)) => value(b)
     case EStrInterp(terms) => {
       // Kiama only likes explicitly immutable Seqs :(
-      val docs = scala.collection.immutable.Seq(terms.map(showExpr): _*)
+      val docs = scala.collection.immutable.Seq(terms.map(showInterpTerm): _*)
       dquotes(hcat(docs))
     }
     case EUnOp(_, _) | EBinOp(_, _, _) => toParenDoc(convert(expr))
