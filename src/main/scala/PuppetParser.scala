@@ -124,7 +124,7 @@ private class PuppetParser extends RegexParsers with PackratParsers {
     }
 
   lazy val ifManifest: P[MIf] =
-    "if" ~> parens(expr) ~ braces(manifest) ~ opt("else" ~> braces(manifest)) ^^ {
+    "if" ~> expr ~ braces(manifest) ~ opt("else" ~> braces(manifest)) ^^ {
       case pred ~ cons ~ Some(alt) => MIf(pred, cons, alt)
       case pred ~ cons ~ None => MIf(pred, cons, MEmpty)
     }
