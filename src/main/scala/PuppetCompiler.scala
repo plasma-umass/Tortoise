@@ -114,8 +114,14 @@ object PuppetCompiler {
       // Update the environment with the new name bindings.
       val updatedEnv = envs._1 ++ paramsOrig.map(_.vari.id).zip(params)
 
+      // Build the default attribute mapping for the define type.
+      val defaultAttrMap = paramsOrig.flatMap(P.Argument.unapply).flatMap {
+        case (P.EVar(key), Some(value)) => Some(updatedEnv(key) -> value)
+        case (_, None) => None
+      }.toMap
+
       // Build the attribute mapping using the updated name environment.
-      val attrMap = attrs.flatMap(P.Attribute.unapply).map {
+      val attrMap = defaultAttrMap ++ attrs.flatMap(P.Attribute.unapply).map {
         case (key, value) => updatedEnv(key) -> value
       }.toMap
 
