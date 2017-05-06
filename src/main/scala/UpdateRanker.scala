@@ -82,6 +82,7 @@ object UpdateRanker {
     case MIf(pred, cons, alt) if affectedExpr(pred) => {
       Seq(TManifest(mani, cxt)) ++ affectedTerms(cons) ++ affectedTerms(alt)
     }
+    case MIf(pred, cons, alt) => affectedTerms(cons) ++ affectedTerms(alt)
   }
 
   def affectedTerms(mani: Manifest, subst: Substitution): Seq[Term] = {
