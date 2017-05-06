@@ -5,7 +5,7 @@ import PuppetEmbeddedDSL._
 import PuppetSyntax._
 import SymbolicFS._
 
-object Scaling {
+object SizeScaling {
   lazy val ignoredDef = define ("ignored")("name") {
     resource("file")(s("/ignored/", $("name")),
       ensure ~> present

@@ -104,7 +104,7 @@ object Main extends App {
     val manifest = PuppetParser.parseFile(inFile)
     val constraints = ConstraintParser.parse(constraintString)
 
-    val res = Scaling.benchmark(manifest, constraints, trials, max)
+    val res = SizeScaling.benchmark(manifest, constraints, trials, max)
 
     val header = 1.to(trials).foldLeft("size") {
       case (acc, trial) => s"$acc,trial$trial"
