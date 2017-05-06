@@ -94,7 +94,7 @@ object Main extends App {
     }
   }
 
-  def benchmark(config: Config): Unit = {
+  def sizeBenchmark(config: Config): Unit = {
     val inFile = config.string("infile")
     val outFile = config.string("outfile")
     val constraintString = config.string("constraints")
@@ -106,6 +106,20 @@ object Main extends App {
 
     val res = SizeScaling.benchmark(manifest, constraints, trials, max)
 
+    outputBenchmark(outFile, trials, res)
+  }
+
+  def updateBenchmark(config: Config): Unit = {
+    val outFile = config.string("outfile")
+    val trials = config.int("trials")
+    val max = config.int("max")
+
+    val res = UpdateScaling.benchmark(trials, max)
+
+    outputBenchmark(outFile, trials, res)
+  }
+
+  def outputBenchmark(outFile: String, trials: Int, res: Map[Int, Seq[Long]]): Unit = {
     val header = 1.to(trials).foldLeft("size") {
       case (acc, trial) => s"$acc,trial$trial"
     }
@@ -167,12 +181,17 @@ object Main extends App {
       .action((_, c) => c.copy(command = ranktest))
       .text("Runs a test of the update ranking.")
 
-    cmd("bench")
-      .action((_, c) => c.copy(command = benchmark))
-      .text("Runs the scalability benchmark for the specified manifest and constraints for a number of trials up to a max size.")
+    cmd("size-bench")
+      .action((_, c) => c.copy(command = sizeBenchmark))
+      .text("Runs the size scalability benchmark for the specified manifest and constraints for a number of trials up to a max size.")
       .children(
         string("infile"), string("outfile"), string("constraints"), int("trials"), int("max")
       )
+
+    cmd("update-bench")
+      .action((_, c) => c.copy(command = updateBenchmark))
+      .text("Runs the size scalability benchmark for the specified manifest and constraints for a number of trials up to a max size.")
+      .children(string("outfile"), int("trials"), int("max"))
   }
 
   parser.parse(args, Config(usage, Map(), Map(), Map())) match {
