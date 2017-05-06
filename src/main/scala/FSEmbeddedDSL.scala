@@ -18,6 +18,9 @@ object FSEmbeddedDSL {
   // Variables
   def $(str: String): EVar = EVar(str)
 
+  // Strings
+  def s(str: String): Expr = EConst(CStr(str))
+
   // Sequencing
   implicit class RichStatement(stmt: Statement) {
     def >>(other: Statement): Statement = (stmt, other) match {
@@ -78,7 +81,7 @@ object FSEmbeddedDSL {
     def =?(rhs: Expr): Expr = EBinOp(BEq, lhs, rhs)
     def <(rhs: Expr): Expr = EBinOp(BLt, lhs, rhs)
     def >(rhs: Expr): Expr = EBinOp(BGt, lhs, rhs)
-    def +(rhs: Expr): Expr = EBinOp(BConcat, lhs, rhs)
+    def +#(rhs: Expr): Expr = EBinOp(BConcat, lhs, rhs)
 
     // Special operators
     def <=(rhs: Expr): Expr = lhs =? rhs || lhs < rhs

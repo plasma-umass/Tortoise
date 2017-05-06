@@ -43,7 +43,7 @@ object PuppetCompiler {
     }
     case P.EConst(c) => F.EConst(c)
     case P.EStrInterp(terms) => terms.map(compileExpr).reduce[F.Expr]({
-      case (lhs, rhs) => lhs + rhs
+      case (lhs, rhs) => lhs +# rhs
     })
     case P.EUnOp(op, operand) => F.EUnOp(compileUnOp(op), compileExpr(operand))
     case P.EBinOp(op, lhs, rhs) => F.EBinOp(compileBinOp(op), compileExpr(lhs), compileExpr(rhs))
@@ -91,13 +91,13 @@ object PuppetCompiler {
         directName
       }
       val ensure = attrMap.get("ensure").map(compileExpr).getOrElse(undef)
-      val provider = attrMap.get("provider").map(compileExpr).getOrElse("dpkg")
+      val provider = attrMap.get("provider").map(compileExpr).getOrElse(s("dpkg"))
 
       // TODO: call out to package server.
       _if (ensure =? "present") {
-        create("/" + provider + "/" + name, "package installed")
+        create(s("/") +# provider +# s("/") +# name, "package installed")
       } .else_if (ensure =? "absent") {
-        rm("/" + provider + "/" + name)
+        rm(s("/") +# provider +# s("/") +# name)
       }
     }
 
