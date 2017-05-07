@@ -94,7 +94,7 @@ object PuppetCompiler {
       val provider = attrMap.get("provider").map(compileExpr).getOrElse(s("dpkg"))
 
       // TODO: call out to package server.
-      _if (ensure =? "present") {
+      _if (ensure =? "present" || ensure =? "latest" || ensure =? "installed") {
         create(s("/") +# provider +# s("/") +# name, "package installed")
       } .else_if (ensure =? "absent") {
         rm(s("/") +# provider +# s("/") +# name)
