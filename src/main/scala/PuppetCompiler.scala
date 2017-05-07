@@ -175,15 +175,20 @@ object PuppetCompilerInitialization {
 
   lazy val initialResEnv: ResEnv = compileManifest {
     label {
-      define ("user") ("name", "managehome") {
+      define ("user") ("name", "managehome", "ensure", "comment", "shell", "groups") {
         resource("file")(s("/etc/users/", $("name")),
-          ensure ~> present
+          ensure ~> $("ensure")
         ) >>
-        _if ($("managehome") /= undef) {
+        _if (($("managehome") /= undef) && ($("ensure") =? present)) {
           resource("file")(s("/home/", $("name")),
             ensure ~> directory
           )
         }
+      } >>
+      define ("ssh_authorized_key") ("ensure", "key", "type", "user") {
+        resource("file")(s("/home/", $("user"), "/ssh.d/", $("key"), ".", $("type")),
+          ensure ~> $("ensure")
+        )
       }
     }
   }(Map() -> Map())._2
