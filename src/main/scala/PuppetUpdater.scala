@@ -24,7 +24,7 @@ object PuppetUpdater {
   // Replaces an expression immediately based on a string (used for let bindings).
   def replaceExpr(expr: Expr, value: String): Expr = expr match {
     case EUndef | EConst(CStr(_)) | EVar(_) => EConst(CStr(value))
-    case EStrInterp(_) => ??? // TODO: implement updating for string interpolation
+    case EStrInterp(_) => EConst(CStr(value))
     case EConst(_) | EUnOp(_, _) | EBinOp(_, _, _) => throw UpdateError(expr)
   }
 
