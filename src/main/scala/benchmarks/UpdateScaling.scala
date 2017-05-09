@@ -25,24 +25,8 @@ object UpdateScaling {
     0.to(max).map {
       n => n -> 1.to(trials).map { _ =>
         val manifest = scale(n)
-        val labeledManifest = manifest.labeled
-        val prog = labeledManifest.compile
         val cs = constraints(n)
-        val startTime = System.nanoTime()
-
-        val transformer = if (optimized) {
-          val progPaths = FSVisitors.collectPaths(manifest.labeled.compile).flatMap(_.ancestors)
-          val constraintPaths = cs.flatMap(_.paths.flatMap(_.ancestors)).toSet
-          val paths = progPaths -- constraintPaths
-          SynthTransformers.doNotEditPaths(paths)(_)
-        } else {
-          SynthTransformers.identity(_)
-        }
-
-        Synthesizer.synthesize(prog, cs, transformer)
-
-        val endTime = System.nanoTime()
-        endTime - startTime
+        Benchmark.synthTimed(manifest, cs, optimized)
       }
     }.toMap
   }
