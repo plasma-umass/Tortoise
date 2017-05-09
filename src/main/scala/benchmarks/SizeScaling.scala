@@ -27,7 +27,9 @@ object SizeScaling {
   // NOTE: https://blogs.oracle.com/dholmes/entry/inside_the_hotspot_vm_clocks
   // Mapping from size to timing (in nanoseconds) for each trial.
   type Result = Map[Int, Seq[Long]]
-  def benchmark(mani: Manifest, constraints: Seq[Constraint], trials: Int, max: Int): Result = {
+  def benchmark(
+    mani: Manifest, constraints: Seq[Constraint], trials: Int, max: Int, optimized: Boolean = true
+  ): Result = {
     import Implicits._
 
     0.to(max).map {
@@ -37,10 +39,16 @@ object SizeScaling {
         val prog = labeledManifest.compile
         val startTime = System.nanoTime()
 
-        val progPaths = FSVisitors.collectPaths(manifest.labeled.compile).flatMap(_.ancestors)
-        val constraintPaths = constraints.flatMap(_.paths.flatMap(_.ancestors)).toSet
-        val paths = progPaths -- constraintPaths
-        Synthesizer.synthesize(prog, constraints, SynthTransformers.doNotEditPaths(paths))
+        val transformer = if (optimized) {
+          val progPaths = FSVisitors.collectPaths(manifest.labeled.compile).flatMap(_.ancestors)
+          val constraintPaths = constraints.flatMap(_.paths.flatMap(_.ancestors)).toSet
+          val paths = progPaths -- constraintPaths
+          SynthTransformers.doNotEditPaths(paths)(_)
+        } else {
+          SynthTransformers.identity(_)
+        }
+
+        Synthesizer.synthesize(prog, constraints, transformer)
 
         val endTime = System.nanoTime()
         endTime - startTime

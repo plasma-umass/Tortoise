@@ -19,7 +19,7 @@ object UpdateScaling {
   }
 
   type Result = Map[Int, Seq[Long]]
-  def benchmark(trials: Int, max: Int): Result = {
+  def benchmark(trials: Int, max: Int, optimized: Boolean = false): Result = {
     import Implicits._
 
     0.to(max).map {
@@ -30,7 +30,16 @@ object UpdateScaling {
         val cs = constraints(n)
         val startTime = System.nanoTime()
 
-        Synthesizer.synthesize(prog, cs)
+        val transformer = if (optimized) {
+          val progPaths = FSVisitors.collectPaths(manifest.labeled.compile).flatMap(_.ancestors)
+          val constraintPaths = cs.flatMap(_.paths.flatMap(_.ancestors)).toSet
+          val paths = progPaths -- constraintPaths
+          SynthTransformers.doNotEditPaths(paths)(_)
+        } else {
+          SynthTransformers.identity(_)
+        }
+
+        Synthesizer.synthesize(prog, cs, transformer)
 
         val endTime = System.nanoTime()
         endTime - startTime

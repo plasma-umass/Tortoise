@@ -79,11 +79,12 @@ object Main extends App {
     val constraintString = config.string("constraints")
     val trials = config.int("trials")
     val max = config.int("max")
+    val optimize = config.bool.getOrElse("no-opts", true)
 
     val manifest = PuppetParser.parseFile(inFile)
     val constraints = ConstraintParser.parse(constraintString)
 
-    val res = SizeScaling.benchmark(manifest, constraints, trials, max)
+    val res = SizeScaling.benchmark(manifest, constraints, trials, max, optimize)
 
     outputBenchmark(outFile, trials, res)
   }
@@ -92,8 +93,9 @@ object Main extends App {
     val outFile = config.string("outfile")
     val trials = config.int("trials")
     val max = config.int("max")
+    val optimize = config.bool.getOrElse("with-opts", false)
 
-    val res = UpdateScaling.benchmark(trials, max)
+    val res = UpdateScaling.benchmark(trials, max, optimize)
 
     outputBenchmark(outFile, trials, res)
   }
@@ -139,6 +141,10 @@ object Main extends App {
       (x, c)  => c.copy(int = c.int + (name -> x))
     }
 
+    def flag(name: String, value: Boolean) = opt[Unit](name).action {
+      (_, c) => c.copy(bool = c.bool + (name -> value))
+    }
+
     head("pup", "0.1")
 
     cmd("synth")
@@ -160,13 +166,17 @@ object Main extends App {
       .action((_, c) => c.copy(command = sizeBenchmark))
       .text("Runs the size scalability benchmark for the specified manifest and constraints for a number of trials up to a max size.")
       .children(
-        string("infile"), string("outfile"), string("constraints"), int("trials"), int("max")
+        string("infile").abbr("i"), string("outfile").abbr("o"), string("constraints").abbr("c"),
+        int("trials").abbr("t"), int("max").abbr("m"), flag("no-opts", false)
       )
 
     cmd("update-bench")
       .action((_, c) => c.copy(command = updateBenchmark))
       .text("Runs the size scalability benchmark for the specified manifest and constraints for a number of trials up to a max size.")
-      .children(string("outfile"), int("trials"), int("max"))
+      .children(
+        string("outfile").abbr("o"), int("trials").abbr("t"), int("max").abbr("m"),
+        flag("with-opts", true)
+      )
   }
 
   parser.parse(args, Config(usage, Map(), Map(), Map())) match {
