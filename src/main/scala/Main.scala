@@ -18,38 +18,6 @@ object Main extends App {
     System.exit(1)
   }
 
-  def ranktest(config: Config): Unit = {
-    val manifest = PuppetParser.parse("""
-      define g($y) {
-        file {$y:
-          ensure => directory
-        }
-      }
-
-      define f($x) {
-        g { y => $x }
-      }
-
-      $w = "/foo"
-      f { x => $w }
-      $v = "/baz"
-      f { x => $v }
-    """)
-
-    // userdel awe
-    // useradd -m arjun
-    val constraints = ConstraintParser.parse("""
-      "/foo" -> nil, "/bar" -> dir
-    """)
-
-    val labeledManifest = manifest.labeled
-    val prog = labeledManifest.compile
-
-    val substs = Synthesizer.synthesizeAll(prog, constraints)
-    val updatedManifest = UpdateRanker.promptRankedChoice(substs)(labeledManifest)
-    println(updatedManifest.pretty)
-  }
-
   def watch(config: Config): Unit = {
     import java.nio.file.{Files, Paths, StandardOpenOption}
     import java.nio.charset._
@@ -187,10 +155,6 @@ object Main extends App {
       .action((_, c) => c.copy(command = watch))
       .text("Instruments the specified shell for updating the specified Puppet manifest.")
       .children(string("filename"), string("shell"))
-
-    cmd("ranktest")
-      .action((_, c) => c.copy(command = ranktest))
-      .text("Runs a test of the update ranking.")
 
     cmd("size-bench")
       .action((_, c) => c.copy(command = sizeBenchmark))
