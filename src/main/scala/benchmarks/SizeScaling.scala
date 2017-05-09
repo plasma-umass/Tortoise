@@ -29,8 +29,6 @@ object SizeScaling {
   def benchmark(
     mani: Manifest, constraints: Seq[Constraint], trials: Int, max: Int, optimized: Boolean = true
   ): Result = {
-    import Implicits._
-
     0.to(max).map {
       n => n -> 1.to(trials).map { _ =>
         val manifest = scale(mani, n)

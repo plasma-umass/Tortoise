@@ -20,8 +20,6 @@ object UpdateScaling {
 
   type Result = Map[Int, Seq[Long]]
   def benchmark(trials: Int, max: Int, optimized: Boolean = false): Result = {
-    import Implicits._
-
     0.to(max).map {
       n => n -> 1.to(trials).map { _ =>
         val manifest = scale(n)
