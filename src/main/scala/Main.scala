@@ -150,17 +150,17 @@ object Main extends App {
     cmd("synth")
       .action((_, c) => c.copy(command = synthesize))
       .text("Synthesize an update to the specified Puppet manifest.")
-      .children(string("filename"), string("constraints"))
+      .children(string("filename").abbr("i"), string("constraints").abbr("c"))
 
     cmd("shell")
       .action((_, c) => c.copy(command = shell))
       .text("Starts a simulated shell for updating the specified Puppet manifest.")
-      .children(string("filename"))
+      .children(string("filename").abbr("i"))
 
     cmd("watch")
       .action((_, c) => c.copy(command = watch))
-      .text("Instruments the specified shell for updating the specified Puppet manifest.")
-      .children(string("filename"), string("shell"))
+      .text("Instruments the specified shell pid for updating the specified Puppet manifest.")
+      .children(string("filename").abbr("i"), string("shell").abbr("p"))
 
     cmd("size-bench")
       .action((_, c) => c.copy(command = sizeBenchmark))
