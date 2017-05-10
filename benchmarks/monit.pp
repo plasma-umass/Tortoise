@@ -41,8 +41,9 @@ define monit() {
   }
 }
 $service = 'monit'
+$mode = '0644'
 monit::service {
   name => $service,
-  mode => '0644'
+  mode => $mode
 }
 monit {}
