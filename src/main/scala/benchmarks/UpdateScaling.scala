@@ -21,7 +21,7 @@ object UpdateScaling {
   type Result = Map[Int, Seq[Long]]
   def benchmark(trials: Int, max: Int, optimized: Boolean = false): Result = {
     0.to(max).map {
-      n => n -> 1.to(trials).map { _ =>
+      n => n -> Benchmark.trials(trials) {
         val manifest = scale(n)
         val cs = constraints(n)
         Benchmark.synthTimed(manifest, cs, optimized)

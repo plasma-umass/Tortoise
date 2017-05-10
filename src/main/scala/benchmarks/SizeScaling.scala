@@ -30,7 +30,7 @@ object SizeScaling {
     mani: Manifest, constraints: Seq[Constraint], trials: Int, max: Int, optimized: Boolean = true
   ): Result = {
     0.to(max).map {
-      n => n -> 1.to(trials).map { _ =>
+      n => n -> Benchmark.trials(trials) {
         val manifest = scale(mani, n)
         Benchmark.synthTimed(manifest, constraints, optimized)
       }

@@ -23,9 +23,14 @@ object Benchmark {
       SynthTransformers.identity(_)
     }
 
-    Synthesizer.synthesize(prog, constraints, transformer)
+    Synthesizer.synthesize(prog, constraints, transformer) match {
+      case Some(_) => ()
+      case None => throw BenchmarkError(s"Failed to synthesize update.\n${prog.partialed.pretty}\n\n$constraints")
+    }
 
     val endTime = System.nanoTime()
     endTime - startTime
   }
+
+  def trials[A](trials: Int)(thunk: => A): Seq[A] = 1.to(trials).map { _ => thunk }
 }

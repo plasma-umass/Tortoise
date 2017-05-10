@@ -21,3 +21,5 @@ case class UpdateError(expr: PuppetSyntax.Expr) extends RuntimeException(
 )
 
 case class EvalError(msg: String) extends RuntimeException(msg)
+
+case class BenchmarkError(msg: String) extends RuntimeException(msg)

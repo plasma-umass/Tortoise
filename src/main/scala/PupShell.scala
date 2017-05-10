@@ -9,6 +9,7 @@ import Infrastructure._
 import ShellCommands._
 
 case class PupShell(path: String) {
+  import PupShell._
   val prompt = "\u03bb "
 
   def start(): Unit = {
@@ -50,7 +51,9 @@ case class PupShell(path: String) {
       case cmd => loop(updateFileSystem(cmd, fileSystem))
     }
   }
+}
 
+object PupShell {
   def updateFileSystem(cmd: Command, fs: FileSystem): FileSystem = cmd match {
     case CSynth => throw Unreachable
     case CMv(src, dst) => fs update (dst -> fs(src)) update (src -> Nil)
