@@ -56,6 +56,17 @@ case class PupShell(path: String) {
 object PupShell {
   def updateFileSystem(cmd: Command, fs: FileSystem): FileSystem = cmd match {
     case CSynth => throw Unreachable
+    case CAptInstall(pkg) => fs update (s"dpkg://$pkg" -> File(None, None))
+    case CAptRemove(pkg) => fs update (s"dpkg://$pkg" -> Nil)
+    case CDnfInstall(pkg) => fs update (s"rpm://$pkg" -> File(None, None))
+    case CDnfRemove(pkg) => fs update (s"rpm://$pkg" -> Nil)
+    case CChmod(mode, path) => fs.getOrElse(path, Nil) match {
+      case Nil => fs update (path -> Nil)
+      case Dir(_) => fs update (path -> Dir(Some(mode)))
+      case File(content, _) => fs update (path -> File(content, Some(mode)))
+    }
+    case CChown(_, _) => ???
+    case CRm(path) => fs update (path -> Nil)
     case CMv(src, dst) => fs update (dst -> fs(src)) update (src -> Nil)
     case CMkdir(path, false) => fs update (path -> Dir(None))
     case CMkdir(path, true) => fs ++ path.ancestors.map(_ -> Dir(None))
@@ -68,6 +79,11 @@ object PupShell {
     }
     case CUserDel(name) => {
       fs update (s"/etc/users/$name" -> Nil) update (s"/etc/groups/$name" -> Nil)
+    }
+    case CPut(path, content) => fs.getOrElse(path, Nil) match {
+      case Nil => fs update (path -> File(Some(content), None))
+      case Dir(mode) => fs update (path -> File(Some(content), mode))
+      case File(_, mode) => fs update (path -> File(Some(content), mode))
     }
   }
 }
