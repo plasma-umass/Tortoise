@@ -100,6 +100,15 @@ object Main extends App {
     outputBenchmark(outFile, trials, res)
   }
 
+  def githubBenchmark(config: Config): Unit = {
+    val trials = config.int("trials")
+    val optimize = config.bool.getOrElse("no-opts", true)
+
+    val res = GitHubBenchmark.runExperiment(trials, optimize)
+
+    println(res)
+  }
+
   def outputBenchmark(outFile: String, trials: Int, res: Map[Int, Seq[Long]]): Unit = {
     val header = 1.to(trials).foldLeft("size") {
       case (acc, trial) => s"$acc,trial$trial"
@@ -177,6 +186,11 @@ object Main extends App {
         string("outfile").abbr("o"), int("trials").abbr("t"), int("max").abbr("m"),
         flag("with-opts", true)
       )
+
+    cmd("github-bench")
+      .action((_, c) => c.copy(command = githubBenchmark))
+      .text("Runs the GitHub case studies benchmark for a number of trials.")
+      .children(int("trials").abbr("t"), flag("no-opts", false))
   }
 
   parser.parse(args, Config(usage, Map(), Map(), Map())) match {
