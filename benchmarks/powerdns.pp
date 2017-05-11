@@ -9,15 +9,15 @@ $powerdns::params::cfg_include_path = '/etc/powerdns/pdns.d'
 
 define powerdns::package(
   $package = $powerdns::params::package,
-  $ensure = 'present',
-  $source = undef,
-  $purge_config = 'false'
+  $ensur = 'present',
+  $sourc = undef,
+  $purge_conf = 'false'
 ) {
-  $package_source = $source
+  $package_source = $sourc
   $package_provider = $powerdns::params::package_provider
 
   package { $package:
-    ensure => $ensure,
+    ensure => $ensur,
     source => $package_source,
     provider => $package_provider
   }
@@ -30,8 +30,8 @@ define powerdns::package(
     owner => $owner,
     group => $group,
     mode => $mode,
-    recurse => $purge_config,
-    purge => $purge_config,
+    recurse => $purge_conf,
+    purge => $purge_conf,
   }
 
   file { "$powerdns::params::cfg_include_path/authoritive.conf":
@@ -44,9 +44,9 @@ define powerdns::package(
 
 define powerdns($ensure = 'present', $source = '', $purge_config = 'false') {
   powerdns::package {
-    ensure => $ensure,
-    source => $source,
-    purge_config => $purge_config
+    ensur => $ensure,
+    sourc => $source,
+    purge_conf => $purge_config
   }
 }
 

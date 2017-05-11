@@ -24,9 +24,9 @@ define xinetd::service (
 
 $bin = '/usr/bin/rsync'
 $args = '--daemon --config /etc/rsync.conf'
-$port = '873'
+$service_port = '873'
 xinetd::service {
   server => $bin,
   server_args => $args,
-  port => $port,
+  port => $service_port,
 }

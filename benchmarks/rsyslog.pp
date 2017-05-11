@@ -1,4 +1,4 @@
-$::osfamily = "debian"
+$::osfamily = "openbsd"
 
 define rsyslog (
     $package_ensure = "present",
@@ -48,6 +48,7 @@ define rsyslog (
   if $default_config == 'true' {
     rsyslog::snippet { '50-default':
       name => $package_name,
+      confdir => $config_dir,
       lines => "'*.info;mail.none;authpriv.none;cron.none               /var/log/messages',
         'kern.*                      -/var/log/kern.log',
         'auth.*;authpriv.*           /var/log/auth.log',
@@ -65,9 +66,9 @@ define rsyslog (
 define rsyslog::snippet (
   $name,
   $lines,
-  $configdir
+  $confdir
 ) {
-  file { "$configdir/${name}.conf":
+  file { "$confdir/${name}.conf":
     ensure => present,
     owner => $default_owner,
     group => $default_group,
