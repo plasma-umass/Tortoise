@@ -92,12 +92,14 @@ object FSEval {
   def evalStatement(stmt: Statement, env: Env)(implicit fs: FileSystem): FileSystem = stmt match {
     case SSkip => fs
     case SMkdir(path) => evalExpr(path, env) match {
-      case VConst(CStr(path)) => fs + (path -> Dir(None))
+      case VConst(CStr(path)) => fs + (path -> Dir(None, None))
       case value => throw TypeError(value.typ, "string")
     }
     case SCreate(path, content) => (evalExpr(path, env), evalExpr(content, env)) match {
-      case (VConst(CStr(path)), VConst(CStr(content))) => fs + (path -> File(Some(content), None))
-      case (VConst(CStr(path)), VUndef) => fs + (path -> File(None, None))
+      case (VConst(CStr(path)), VConst(CStr(content))) => {
+        fs + (path -> File(Some(content), None, None))
+      }
+      case (VConst(CStr(path)), VUndef) => fs + (path -> File(None, None, None))
       case (VConst(CStr(_)), value) => throw TypeError(value.typ, "string")
       case (value, _) => throw TypeError(value.typ, "string")
     }
@@ -112,14 +114,22 @@ object FSEval {
     }
     case SChmod(path, mode) => (evalExpr(path, env), evalExpr(mode, env)) match {
       case (VConst(CStr(path)), VConst(CStr(mode))) => fs(path) match {
-        case File(content, _) => fs + (path -> File(content, Some(mode)))
-        case Dir(_) => fs + (path -> Dir(Some(mode)))
+        case File(content, _, owner) => fs + (path -> File(content, Some(mode), owner))
+        case Dir(_, owner) => fs + (path -> Dir(Some(mode), owner))
         case Nil => throw EvalError(s"Cannot set the mode of undefined path $path to $mode.")
       }
       case (VConst(CStr(_)), value) => throw TypeError(value.typ, "string")
       case (value, _) => throw TypeError(value.typ, "string")
     }
-    case SChown(path, owner) => ??? // TODO: implement in evaluator
+    case SChown(path, owner) => (evalExpr(path, env), evalExpr(owner, env)) match {
+      case (VConst(CStr(path)), VConst(CStr(owner))) => fs(path) match {
+        case File(content, mode, _) => fs + (path -> File(content, mode, Some(owner)))
+        case Dir(mode, _) => fs + (path -> Dir(mode, Some(owner)))
+        case Nil => throw EvalError(s"Cannot set the owner of undefined path $path to $owner.")
+      }
+      case (VConst(CStr(_)), value) => throw TypeError(value.typ, "string")
+      case (value, _) => throw TypeError(value.typ, "string")
+    }
     case SSeq(lhs, rhs) => evalStatement(rhs, env)(evalStatement(lhs, env))
     case SLet(id, expr, _, body) => evalStatement(body, env + (id -> evalExpr(expr, env)))
     case SIf(pred, cons, alt) => evalExpr(pred, env) match {
