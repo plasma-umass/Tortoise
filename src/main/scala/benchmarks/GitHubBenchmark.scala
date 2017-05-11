@@ -106,11 +106,11 @@ object GitHubBenchmark {
         val name = """/([^.]*).pp""".r.findFirstMatchIn(path).get.group(1)
         val size = PuppetVisitors.size(PuppetParser.parseFile(path))
         val numUpdates = updates(path).length
-        val averageTime = timings(path)
+        val averageTime = timings(path) / 1000000
 
         s"$name & $size & $numUpdates & $averageTime \\\\"
       }
-    }.foldLeft("Name & Resources & Updates & Average Time \\\\") {
+    }.foldLeft("Name & Resources & Updates & Average Time (ms) \\\\") {
       case (acc, line) => s"${acc}\n$line"
     }
   }
