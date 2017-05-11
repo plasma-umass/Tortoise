@@ -64,7 +64,7 @@ object PuppetCompiler {
       val mode = attrMap.get("mode").map(compileExpr).getOrElse(undef)
       val content = attrMap.get("content").map(compileExpr).getOrElse(undef)
       val owner = attrMap.get("owner").map(compileExpr).getOrElse(undef)
-      val ensure = attrMap.get("ensure").map(compileExpr).getOrElse(undef)
+      val ensure = attrMap.get("ensure").map(compileExpr).getOrElse(s("present"))
 
       _if (ensure =? "present") {
         create(path, content)
