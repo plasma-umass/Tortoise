@@ -9,9 +9,15 @@ object PuppetEmbeddedDSL {
   lazy val empty = MEmpty
 
   // Define types
-  def define(typ: String)(args: String*)(body: Manifest): Manifest = MDefine(
-    typ, args.map(id => Argument(EVar(id), None)), body
+  def define(typ: String)(args: (String, Option[Expr])*)(body: Manifest): Manifest = MDefine(
+    typ, args.map(pair => Argument(EVar(pair._1), pair._2)), body
   )
+
+  implicit def stringToArgPair(string: String): (String, Option[Expr]) = (string, None)
+
+  implicit class RichStr(str: String) {
+    def :=(expr: Expr): (String, Option[Expr]) = (str, Some(expr))
+  }
 
   // Resources
   def resource(typ: String)(title: Expr, attrs: Attribute*): Manifest = MResource(typ, title, attrs)

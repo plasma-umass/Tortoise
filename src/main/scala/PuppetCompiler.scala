@@ -95,9 +95,9 @@ object PuppetCompiler {
 
       // TODO: call out to package server.
       _if (ensure =? "present" || ensure =? "latest" || ensure =? "installed") {
-        create(s("/") +# provider +# s("/") +# name, "package installed")
+        create(provider +# s("://") +# name, "package installed")
       } .else_if (ensure =? "absent") {
-        rm(s("/") +# provider +# s("/") +# name)
+        rm(provider +# s("://") +# name)
       }
     }
 
@@ -175,7 +175,7 @@ object PuppetCompilerInitialization {
 
   lazy val initialResEnv: ResEnv = compileManifest {
     label {
-      define ("user") ("name", "managehome", "ensure", "comment", "shell", "groups") {
+      define ("user") ("name", "managehome", "ensure" := "present", "comment", "shell", "groups") {
         resource("file")(s("/etc/users/", $("name")),
           ensure ~> $("ensure")
         ) >>
