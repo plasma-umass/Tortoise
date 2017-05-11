@@ -92,6 +92,20 @@ object FSPartialEvaluator {
       // Cases for string concatenation.
       case (BConcat, EConst(CStr(lhs)), EConst(CStr(rhs))) => EConst(CStr(lhs + rhs))
 
+      case (BConcat, EConst(CStr(lhs)), EBinOp(BConcat, lhsExpr, rhs)) => evalExpr(lhsExpr) match {
+        case EConst(CStr(lhs2)) => EConst(CStr(lhs + lhs2))
+        case EConst(CBool(_)) => throw TypeError("bool", "string")
+        case EConst(CNum(_)) => throw TypeError("num", "string")
+        case lhsPrime => EBinOp(BConcat, EConst(CStr(lhs)), EBinOp(BConcat, lhsPrime, evalExpr(rhs)))
+      }
+
+      case (BConcat, EBinOp(BConcat, lhs, rhsExpr), EConst(CStr(rhs))) => evalExpr(rhsExpr) match {
+        case EConst(CStr(rhs2)) => EConst(CStr(rhs + rhs2))
+        case EConst(CBool(_)) => throw TypeError("bool", "string")
+        case EConst(CNum(_)) => throw TypeError("num", "string")
+        case rhsPrime => EBinOp(BConcat, EBinOp(BConcat, evalExpr(lhs), rhsPrime), EConst(CStr(rhs)))
+      }
+
       // Cases for string concatenation with type errors.
       case (BConcat, EConst(CBool(_)), _) => throw TypeError("bool", "string")
       case (BConcat, _, EConst(CBool(_))) => throw TypeError("bool", "string")
