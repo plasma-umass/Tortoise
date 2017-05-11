@@ -98,4 +98,8 @@ object SymbolicFS {
       (hole.id, Seq(holeDef))
     }
   }
+
+  def resetState() {
+    holes = Map()
+  }
 }
