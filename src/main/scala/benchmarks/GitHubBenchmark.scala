@@ -64,20 +64,26 @@ object GitHubBenchmark {
           }
 
           print("Which update is the best? ")
-          io.StdIn.readInt() match {
-            case n if n >= 1 && n <= 5 => ranked(0) == randomized(n - 1)
+          val res = io.StdIn.readInt() match {
+            case n if n >= 1 && n <= 5 => Stream.from(1).zip(ranked).find {
+              case (_, subst) => subst == randomized(n - 1)
+            }.get._1
             case _ => throw BenchmarkError("User inputted an invalid update number.")
           }
           println()
           println()
+          res
         }
       }
     }
 
-    val trueCases = results.filter(x => x == true).length
+    val trueCases = results.filter(x => x == 1).length
     val allCases = results.length
 
-    s"Tortoise correctly picked the best update as #1 in $trueCases of $allCases cases."
+    val base = s"Tortoise correctly picked the best update as #1 in $trueCases of $allCases cases.\nBest Option Ranked:"
+    results.foldLeft(base) {
+      case (base, rank) => s"${base}\n$rank"
+    }
   }
 
   // A path to a benchmark and a collection of shell command sequences each representing a different
