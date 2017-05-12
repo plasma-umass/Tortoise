@@ -19,13 +19,8 @@ object UpdateRanker {
 
     Stream.from(1).zip(ranked).take(5).foreach {
       case (n, subst) => {
-        val originalTerms = affectedTerms(manifest, subst)
-        val updatedTerms = originalTerms.map(_.updated)
-        val affected = originalTerms.zip(updatedTerms).map { case (x, y) => (x.pretty, y.pretty) }
         println(s"Update [$n]:")
-        affected.foreach {
-          case (before, after) => println(s"$before BECOMES $after")
-        }
+        summarizeUpdate(manifest, subst).foreach(println)
         println()
       }
     }
@@ -34,6 +29,16 @@ object UpdateRanker {
     io.StdIn.readInt() match {
       case n if n >= 1 && n <= 5 => PuppetUpdater.update(manifest, ranked(n - 1))
       case _ => manifest
+    }
+  }
+
+  def summarizeUpdate(manifest: Manifest, subst: Substitution): Seq[String] = {
+    val originalTerms = affectedTerms(manifest, subst)
+    val updatedTerms = originalTerms.map(_.updated)
+    val affected = originalTerms.zip(updatedTerms).map { case (x, y) => (x.pretty, y.pretty) }
+
+    affected.map {
+      case (before, after) => s"$before BECOMES $after"
     }
   }
 
