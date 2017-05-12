@@ -74,7 +74,7 @@ object GitHubBenchmark {
       }
     }
 
-    val trueCases = results.filter(x => x).length
+    val trueCases = results.filter(x => x == true).length
     val allCases = results.length
 
     s"Tortoise correctly picked the best update as #1 in $trueCases of $allCases cases."
