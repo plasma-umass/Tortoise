@@ -105,7 +105,13 @@ object Main extends App {
     val optimize = config.bool.getOrElse("no-opts", true)
 
     val res = GitHubBenchmark.runAutomatedExperiment(trials, optimize)
+    println(res)
+  }
 
+  def humanBenchmark(config: Config): Unit = {
+    val optimize = config.bool.getOrElse("no-opts", true)
+
+    val res = GitHubBenchmark.runHumanAidedExperiment(optimize)
     println(res)
   }
 
@@ -191,6 +197,11 @@ object Main extends App {
       .action((_, c) => c.copy(command = githubBenchmark))
       .text("Runs the GitHub case studies benchmark for a number of trials.")
       .children(int("trials").abbr("t"), flag("no-opts", false))
+
+    cmd("human-bench")
+      .action((_, c) => c.copy(command = humanBenchmark))
+      .text("Runs the GitHub case studies benchmark with human interaction.")
+      .children(flag("no-opts", false))
   }
 
   parser.parse(args, Config(usage, Map(), Map(), Map())) match {

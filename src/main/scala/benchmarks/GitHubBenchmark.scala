@@ -13,7 +13,7 @@ object GitHubBenchmark {
     Benchmark.synthTimed(manifest, constraints.toSeq, optimized)
   }
 
-  def runAutomatedExperiment(trials: Int, optimized: Boolean = true) = {
+  def runAutomatedExperiment(trials: Int, optimized: Boolean = true): String = {
     val updates = exps.toMap
 
     val timings = exps.map {
@@ -37,6 +37,47 @@ object GitHubBenchmark {
     }.foldLeft("Name & Resources & Updates & Average Time (ms) \\\\") {
       case (acc, line) => s"${acc}\n$line"
     }
+  }
+
+  def runHumanAidedExperiment(optimized: Boolean = true) = {
+    val results = exps.flatMap {
+      case (path, cmdSequences) => cmdSequences.map {
+        case cmds => {
+          SymbolicFS.resetState()
+          val manifest = PuppetParser.parseFile(path)
+          val fs = FSEval.eval(manifest.labeled.compile)
+          val constraints = cmds.map(parseCommand).foldRight(fs) {
+            case (cmd, fs) => PupShell.updateFileSystem(cmd, fs)
+          }.toConstraints.toSet -- fs.toConstraints.toSet
+
+          val substs = Benchmark.synthAll(manifest, constraints.toSeq, optimized)
+          val ranked = UpdateRanker.rank(substs)(manifest.labeled).take(5)
+          val randomized = util.Random.shuffle(ranked)
+
+          println(s"From commands: $cmds")
+          Stream.from(1).zip(randomized).foreach {
+            case (n, subst) => {
+              println(s"Update [$n]:")
+              UpdateRanker.summarizeUpdate(manifest.labeled, subst).foreach(println)
+              println()
+            }
+          }
+
+          print("Which update is the best? ")
+          io.StdIn.readInt() match {
+            case n if n >= 1 && n <= 5 => ranked(0) == randomized(n - 1)
+            case _ => throw BenchmarkError("User inputted an invalid update number.")
+          }
+          println()
+          println()
+        }
+      }
+    }
+
+    val trueCases = results.filter(x => x).length
+    val allCases = results.length
+
+    s"Tortoise correctly picked the best update as #1 in $trueCases of $allCases cases."
   }
 
   // A path to a benchmark and a collection of shell command sequences each representing a different

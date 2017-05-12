@@ -32,5 +32,23 @@ object Benchmark {
     endTime - startTime
   }
 
+  def synthAll(
+    mani: Manifest, constraints: Seq[Constraint], optimized: Boolean = true
+  ): Seq[Substitution] = {
+    val labeledManifest = mani.labeled
+    val prog = labeledManifest.compile
+
+    val transformer = if (optimized) {
+      val progPaths = FSVisitors.collectPaths(prog).flatMap(_.ancestors)
+      val constraintPaths = constraints.flatMap(_.paths.flatMap(_.ancestors)).toSet
+      val paths = progPaths -- constraintPaths
+      SynthTransformers.doNotEditPaths(paths)(_)
+    } else {
+      SynthTransformers.identity(_)
+    }
+
+    Synthesizer.synthesizeAll(prog, constraints, transformer)
+  }
+
   def trials[A](trials: Int)(thunk: => A): Seq[A] = 1.to(trials).map { _ => thunk }
 }
