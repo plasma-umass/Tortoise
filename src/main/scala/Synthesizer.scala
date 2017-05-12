@@ -307,8 +307,10 @@ case class Synthesizer(paths: Set[String], defaultFS: Map[String, FileState]) {
 
     // Iterate through all possible satisfying models until there are no more possible.
     var res: Seq[List[SExpr]] = Seq()
-    while (solver.checkSat()) {
-      val currentModel = solver.getModel()
+    val startTime = java.time.LocalTime.now()
+    while (solver.checkSat() &&
+           java.time.LocalTime.now().isBefore(startTime.plusMinutes(2))) {
+      val currentModel = solver.getModel()  
       res = res :+ currentModel
 
       // Collect all pairs of symbol and their values from the model.
