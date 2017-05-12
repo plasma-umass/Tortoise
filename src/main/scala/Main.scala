@@ -104,7 +104,7 @@ object Main extends App {
     val trials = config.int("trials")
     val optimize = config.bool.getOrElse("no-opts", true)
 
-    val res = GitHubBenchmark.runExperiment(trials, optimize)
+    val res = GitHubBenchmark.runAutomatedExperiment(trials, optimize)
 
     println(res)
   }
