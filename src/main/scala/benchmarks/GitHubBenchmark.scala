@@ -79,8 +79,10 @@ object GitHubBenchmark {
 
     val trueCases = results.filter(x => x == 1).length
     val allCases = results.length
+    val rank = results.sum.toDouble / results.length
 
-    val base = s"Tortoise correctly picked the best update as #1 in $trueCases of $allCases cases.\nBest Option Ranked:"
+    val base = s"""Ranked best update in $trueCases of $allCases cases for an average rank of $rank.
+Best Option Ranked:"""
     results.foldLeft(base) {
       case (base, rank) => s"${base}\n$rank"
     }
