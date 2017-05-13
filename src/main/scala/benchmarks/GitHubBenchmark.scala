@@ -112,6 +112,9 @@ Best Option Ranked:"""
       // Seq("mv /etc/nginx/sites-enabled/www.piedpiper.com /etc/nginx/sites-enabled/www.piperchat.com"),
       // Seq("mv /etc/nginx/sites-available/www.piedpiper.com /etc/nginx/sites-available/www.piperchat.com")
     ),
+    experiment("benchmarks/irc.pp")(
+      Seq("userdel nfisher")
+    ),
     experiment("benchmarks/jpa.pp")(
       Seq("apt remove unzip")
     ),
