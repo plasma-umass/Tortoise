@@ -62,6 +62,8 @@ object FSEval {
       case (VConst(CBool(lhs)), VConst(CBool(rhs))) => VConst(CBool(lhs == rhs))
       case (VConst(CStr(lhs)), VConst(CStr(rhs))) => VConst(CBool(lhs == rhs))
       case (VUndef, VUndef) => VConst(CBool(true))
+      case (_, VUndef) => VConst(CBool(false))
+      case (VUndef, _) => VConst(CBool(false))
       case (lhs, rhs) => throw TypeError(rhs.typ, lhs.typ)
     }
     case BLt => lhs => rhs => (lhs, rhs) match {
