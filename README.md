@@ -1,5 +1,7 @@
 # Tortoise [![Build Status](https://travis-ci.org/plasma-umass/Tortoise.svg?branch=master)](https://travis-ci.org/plasma-umass/Tortoise)
 
+Tortoise is an automated repair tool for Puppet that allows system administrators to automatically synthesize program repairs based on changes made via the command-line.
+
 ## Prerequisites
 
 1. Oracle JDK 8.
