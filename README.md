@@ -1,4 +1,4 @@
-# Pup: Pup updates Puppet [![Build Status](https://travis-ci.org/plasma-umass/Pup.svg?branch=master)](https://travis-ci.org/plasma-umass/Pup)
+# Tortoise [![Build Status](https://travis-ci.org/plasma-umass/Tortoise.svg?branch=master)](https://travis-ci.org/plasma-umass/Tortoise)
 
 ## Prerequisites
 
