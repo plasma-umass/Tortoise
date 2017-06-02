@@ -1,4 +1,4 @@
-package pup
+package tortoise
 
 import edu.umass.cs.smtlib.SMT.Implicits._
 import smtlib.parser.Commands._

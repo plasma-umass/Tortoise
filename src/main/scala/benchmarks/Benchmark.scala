@@ -1,6 +1,6 @@
-package pup
+package tortoise
 
-import pup._
+import tortoise._
 import PuppetEmbeddedDSL._
 import PuppetSyntax._
 import SymbolicFS._

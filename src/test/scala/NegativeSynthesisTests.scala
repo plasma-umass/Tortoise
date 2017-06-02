@@ -1,4 +1,4 @@
-import pup._
+import tortoise._
 
 import Implicits._
 import PuppetSyntax._

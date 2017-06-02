@@ -1,4 +1,4 @@
-package pup
+package tortoise
 
 import PuppetSyntax._
 import PuppetUpdater._

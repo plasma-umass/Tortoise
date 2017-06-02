@@ -1,6 +1,6 @@
-package pup
+package tortoise
 
-import pup.{FSSyntax => F, PuppetSyntax => P}
+import tortoise.{FSSyntax => F, PuppetSyntax => P}
 
 /*
  * Assume that the manifest is deterministic and that the order in which resources appear is the

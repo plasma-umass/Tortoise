@@ -1,6 +1,6 @@
-package pup.benchmarks
+package tortoise.benchmarks
 
-import pup._
+import tortoise._
 import PuppetEmbeddedDSL._
 import PuppetSyntax._
 import SymbolicFS._

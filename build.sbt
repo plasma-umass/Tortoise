@@ -1,4 +1,4 @@
-name := "pup"
+name := "tortoise"
 version := "0.1"
 scalaVersion := "2.11.8"
 scalacOptions ++= Seq(
@@ -40,5 +40,5 @@ libraryDependencies ++=
 testOptions in Test += Tests.Argument("-oD")
 logBuffered in Test := false
 
-assemblyJarName in assembly := "pup.jar"
+assemblyJarName in assembly := "tortoise.jar"
 test in assembly := {}

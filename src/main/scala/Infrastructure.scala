@@ -1,9 +1,9 @@
-package pup
+package tortoise
 
 import scala.collection.JavaConverters._
 
 import SymbolicFS.{Constraint, StateConstraint, ContentsConstraint, ModeConstraint, OwnerConstraint}
-import pup.{SymbolicFS => S}
+import tortoise.{SymbolicFS => S}
 
 /**
   * This module defines general infrastructure for building interactive setups using Pup. It defines

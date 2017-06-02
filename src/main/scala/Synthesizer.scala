@@ -1,4 +1,4 @@
-package pup
+package tortoise
 
 import edu.umass.cs.smtlib._
 import edu.umass.cs.smtlib.SMT._
@@ -8,7 +8,7 @@ import smtlib.parser.Terms._
 import smtlib.theories.Core._
 import smtlib.theories.Ints._
 import smtlib.theories.experimental.Strings._
-import pup.{FSSyntax => F, SynthTransformers => T}
+import tortoise.{FSSyntax => F, SynthTransformers => T}
 import SymbolicFS._
 import SymbolicFSCompiler._
 
