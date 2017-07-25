@@ -69,8 +69,14 @@ case class STrace(path: String, pid: String) {
       val fs = FSEval.eval(prog)
       val constraints = this.constraints(fs)
 
-      Synthesizer.synthesize(prog, constraints).map {
-        subst => PuppetUpdater.update(labeledManifest, subst)
+      val substs = Synthesizer.synthesizeAll(prog, constraints)
+
+      if (substs.size > 1) {
+        Some(UpdateRanker.promptRankedChoice(substs)(labeledManifest))
+      } else if (substs.size == 1) {
+        Some(PuppetUpdater.update(labeledManifest, substs(0)))
+      } else {
+        None
       }
     }) match {
       case Success(Some(res)) => {
