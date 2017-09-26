@@ -10,9 +10,10 @@ private class ConstraintParser extends RegexParsers with PackratParsers {
   lazy val number: P[String] = "" ~> "[0-9]+".r
   lazy val doubleQuotedString: P[String] = "\"" ~> "[^\"]*".r <~ "\""
   lazy val singleQuotedString: P[String] = "\'" ~> "[^\']*".r <~ "\'"
+  lazy val angleQuotedString: P[String] = "<" ~> "[^>]*".r <~ ">"
 
   lazy val path: P[String] =
-    doubleQuotedString | singleQuotedString
+    doubleQuotedString | singleQuotedString | angleQuotedString
 
   lazy val state: P[FileState] =
     "file" ^^ { _ => File } |
