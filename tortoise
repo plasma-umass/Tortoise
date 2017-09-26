@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+# echo '"' "run" $@ '"' | xargs sbt
+sbt "run $*"
